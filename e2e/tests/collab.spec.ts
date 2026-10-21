@@ -230,7 +230,10 @@ test("Chief 在群聊中规划并起草委托", async () => {
 test("V0.4：链路、用量与预算、自主策略、项目权限、记忆编辑与污染", async () => {
   // trace_id end to end: every task carries one; the trace API returns the chain.
   const tasks = (await apiAs(zs.page, "GET", "/api/tasks")).json as unknown as { id: string; trace_id: string; status: string }[];
-  const merged = tasks.find((t) => t.status === "completed" && t.trace_id);
+  // The merged task is the completed one that has a PR (chat or no-diff runs complete without one).
+  const prs = (await apiAs(zs.page, "GET", "/api/pull-requests")).json as unknown as { task_id: string }[];
+  const withPR = new Set(prs.map((p) => p.task_id));
+  const merged = tasks.find((t) => t.status === "completed" && t.trace_id && withPR.has(t.id));
   expect(merged).toBeTruthy();
   const tr = await apiAs(zs.page, "GET", `/api/traces/${merged!.trace_id}`);
   expect(tr.status).toBe(200);
