@@ -1,0 +1,96 @@
+{
+  "common": { "error": "出错了，请重试", "back": "返回", "save": "保存" },
+  "login": {
+    "title": "登录 CollabOS",
+    "subtitle": "开发模式登录：邮箱即身份",
+    "email": "邮箱", "name": "显示名", "handle": "@ 用户名",
+    "invite": "邀请码（可选）", "invitePlaceholder": "加入已有工作区",
+    "password": "预览访问口令", "submit": "登录"
+  },
+  "setup": {
+    "title": "创建项目", "subtitle": "项目对应一个 Git 远端，并自动创建群聊。",
+    "name": "项目名", "remote": "远端地址", "remotePlaceholder": "/srv/git/demo.git 或 https://github.com/org/repo.git",
+    "branch": "默认分支", "create": "创建"
+  },
+  "shell": {
+    "rooms": "群聊", "invite": "邀请码", "deviceOnline": "本机守护进程已连接", "deviceOffline": "守护进程未连接",
+    "noDevice": "尚未配对设备", "dark": "深色", "light": "浅色", "logout": "退出", "reconnecting": "连接已断开，正在重连…"
+  },
+  "chat": {
+    "hideDock": "收起面板", "showDock": "展开面板", "empty": "还没有消息。@ 一个 Bot 开始协作。",
+    "botOf": "{{owner}} 的 Bot", "untrusted": "不可信内容", "retry": "重试", "sending": "发送中…",
+    "placeholder": "给 #{{room}} 发消息，输入 @ 提到成员或 Bot", "hint": "Enter 发送 · Shift+Enter 换行", "send": "发送"
+  },
+  "card": {
+    "details": "详情", "grant": "授权范围", "decidedBy": "由 {{name}} 决定",
+    "draft": {
+      "badge": "委托草稿", "to": "委托 @{{handle}}（{{owner}} 的 Bot）", "draft": "草稿", "submitted": "已提交", "discarded": "已丢弃",
+      "title": "标题", "prompt": "指令", "resources": "可修改的文件（逗号分隔的 glob）", "approvers": "合并审批人（具名）",
+      "budget": "预算：{{tokens}} tokens · {{minutes}} 分钟", "footer": "确认后发给对方所有者接单",
+      "discard": "丢弃", "confirm": "确认委托"
+    },
+    "intake": {
+      "pending": "等待接单", "accepted": "已接单", "rejected": "已拒绝",
+      "from": "{{requester}} 请求 @{{handle}}", "approvers": "合并审批人：{{names}}",
+      "ownerHint": "接单后将在你的设备上、隔离环境中执行", "waiting": "等待 {{owner}} 决定",
+      "accept": "接单", "reject": "拒绝"
+    },
+    "permission": {
+      "pending": "需要授权", "approved": "已允许", "denied": "已拒绝", "eligible": "可审批：{{names}}",
+      "title_scope_exceeded": "Agent 想修改一个超出约定范围的文件", "title_action_forbidden": "Agent 想执行未授权的操作",
+      "hint": "Agent 已暂停，等你决定", "notEligible": "你不是此请求的审批人",
+      "allow": "仅本次允许", "deny": "拒绝"
+    },
+    "merge": {
+      "pending": "等待合并审批", "merging": "合并中", "merged": "已合并", "rejected": "已驳回", "failed": "合并失败",
+      "pr": "PR #{{number}}", "approvers": "具名审批人：{{names}}", "commit": "提交",
+      "mergedAs": "已合并为 {{commit}}", "hint": "合并将由你自己的设备用你的 Git 凭据执行",
+      "locked": "仅具名审批人可以合并", "approve": "批准并合并", "reject": "驳回"
+    },
+    "memory": {
+      "pending": "待确认", "confirmed": "已确认", "rejected": "已拒绝", "title": "MEMORY.md v{{version}} 建议",
+      "hint": "确认后作为可信上下文提供给之后的任务", "waiting": "等待项目负责人 {{lead}} 确认",
+      "confirm": "确认", "reject": "拒绝"
+    }
+  },
+  "dock": {
+    "tasks": "任务 / PR", "people": "成员 / 设备", "memory": "MEMORY.md",
+    "taskList": "任务", "noTasks": "暂无任务", "prs": "Pull Requests", "noPrs": "暂无 PR",
+    "cancel": "取消任务", "requester": "发起人", "executor": "执行者", "approvers": "审批人", "tokens": "Tokens",
+    "depth": "委托深度", "reason": "原因", "members": "成员", "owner": "所有者", "agents": "Bots", "devices": "设备",
+    "sandbox": "沙箱 {{name}}", "quota": "每日 {{n}} 单", "editIntake": "接单策略", "quotaLabel": "每日上限"
+  },
+  "memory": {
+    "lead": "项目负责人：{{name}}", "version": "当前 v{{v}}", "pending": "v{{v}} 待确认",
+    "history": "版本历史", "byAgent": "Agent 建议", "bySystem": "初始化"
+  },
+  "pair": {
+    "open": "配对设备", "title": "配对新设备", "desc": "为一台运行 collab 守护进程的电脑生成节点令牌，并声明它托管的 Bot。",
+    "name": "设备名", "chief": "Chief Bot @用户名（可选）", "coder": "专家 Bot @用户名（可选）", "submit": "生成令牌",
+    "run": "在该设备上运行：", "once": "令牌只显示一次，请立即保存。", "note": "同一台机器运行多个守护进程时，为每个设置不同的"
+  },
+  "event": {
+    "status": "状态 → {{to}}", "permission": "请求越权修改：{{paths}}", "decided": "审批结果：{{decision}}",
+    "blocked": "策略拦截 {{code}}：{{target}}", "pr": "已推送分支并创建 PR", "merged": "已合并 {{commit}}",
+    "completed": "执行结束", "submitted": "委托已提交", "dispatched": "已下发到设备", "queued": "设备离线，已排队",
+    "reconnected": "设备已重连", "daemon_lost": "设备重启后任务丢失"
+  },
+  "status": {
+    "submitted": "已提交", "pending_intake": "待接单", "accepted": "已接单", "rejected": "已拒绝", "queued": "排队中",
+    "working": "执行中", "running_offline": "离线运行中", "input_required": "需要输入", "approval_required": "待审批",
+    "completed": "已完成", "failed": "失败", "canceled": "已取消", "unknown": "状态未知"
+  },
+  "action": { "read": "读取", "edit": "修改", "execute": "执行命令", "network": "网络" },
+  "reason": {
+    "unauthorized": "无权限", "intake_denied": "对方拒绝接单", "quota_exceeded": "超出每日接单上限",
+    "scope_exceeded": "超出授权范围", "action_forbidden": "操作未授权", "sandbox_denied": "被沙箱拦截",
+    "sandbox_unavailable": "对方设备没有沙箱，无法接受跨所有者任务", "budget_exceeded": "超出预算",
+    "depth_exceeded": "超出委托深度", "duplicate": "重复请求", "failed": "执行失败", "merge_rejected": "合并被驳回",
+    "commit_mismatch": "分支与批准的提交不一致", "daemon_lost": "设备丢失任务", "offline_grace_expired": "设备离线超时",
+    "canceled_by_user": "已被用户取消", "unknown_target": "委托目标不存在", "repo_not_configured": "设备未配置该仓库",
+    "agent_failed": "Agent 运行失败"
+  },
+  "pr": { "open": "待合并", "merged": "已合并", "closed": "已关闭" },
+  "agent": { "chief": "Chief", "specialist": "专家" },
+  "intake": { "manual": "手动接单", "allowlist": "白名单自动接单", "closed": "不接单" }
+}

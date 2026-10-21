@@ -1,0 +1,96 @@
+{
+  "common": { "error": "Something went wrong, please retry", "back": "Back", "save": "Save" },
+  "login": {
+    "title": "Sign in to CollabOS",
+    "subtitle": "Development sign-in: your email is your identity",
+    "email": "Email", "name": "Display name", "handle": "@ handle",
+    "invite": "Invite code (optional)", "invitePlaceholder": "Join an existing workspace",
+    "password": "Preview access code", "submit": "Sign in"
+  },
+  "setup": {
+    "title": "Create a project", "subtitle": "A project maps to one Git remote and gets its own group chat.",
+    "name": "Project name", "remote": "Remote URL", "remotePlaceholder": "/srv/git/demo.git or https://github.com/org/repo.git",
+    "branch": "Default branch", "create": "Create"
+  },
+  "shell": {
+    "rooms": "Rooms", "invite": "Invite", "deviceOnline": "Local daemon connected", "deviceOffline": "Daemon not connected",
+    "noDevice": "No paired device", "dark": "Dark", "light": "Light", "logout": "Sign out", "reconnecting": "Disconnected, reconnecting…"
+  },
+  "chat": {
+    "hideDock": "Hide panel", "showDock": "Show panel", "empty": "No messages yet. @mention a bot to start.",
+    "botOf": "{{owner}}'s bot", "untrusted": "untrusted", "retry": "Retry", "sending": "Sending…",
+    "placeholder": "Message #{{room}}, type @ to mention people or bots", "hint": "Enter to send · Shift+Enter for newline", "send": "Send"
+  },
+  "card": {
+    "details": "Details", "grant": "Grant", "decidedBy": "Decided by {{name}}",
+    "draft": {
+      "badge": "Delegation draft", "to": "Delegate to @{{handle}} ({{owner}}'s bot)", "draft": "Draft", "submitted": "Submitted", "discarded": "Discarded",
+      "title": "Title", "prompt": "Instructions", "resources": "Files it may change (comma-separated globs)", "approvers": "Named merge approvers",
+      "budget": "Budget: {{tokens}} tokens · {{minutes}} min", "footer": "On confirm, the owner is asked to accept",
+      "discard": "Discard", "confirm": "Confirm delegation"
+    },
+    "intake": {
+      "pending": "Awaiting intake", "accepted": "Accepted", "rejected": "Rejected",
+      "from": "{{requester}} asks @{{handle}}", "approvers": "Merge approvers: {{names}}",
+      "ownerHint": "Runs on your device in a sandbox once accepted", "waiting": "Waiting for {{owner}}",
+      "accept": "Accept", "reject": "Reject"
+    },
+    "permission": {
+      "pending": "Approval needed", "approved": "Allowed", "denied": "Denied", "eligible": "Can decide: {{names}}",
+      "title_scope_exceeded": "The agent wants to change a file outside its grant", "title_action_forbidden": "The agent wants to perform an action it was not granted",
+      "hint": "The agent is paused until you decide", "notEligible": "You are not an approver for this request",
+      "allow": "Allow once", "deny": "Deny"
+    },
+    "merge": {
+      "pending": "Awaiting merge approval", "merging": "Merging", "merged": "Merged", "rejected": "Rejected", "failed": "Merge failed",
+      "pr": "PR #{{number}}", "approvers": "Named approvers: {{names}}", "commit": "commit",
+      "mergedAs": "Merged as {{commit}}", "hint": "Your own device merges with your own Git credentials",
+      "locked": "Only named approvers can merge", "approve": "Approve & merge", "reject": "Reject"
+    },
+    "memory": {
+      "pending": "Pending", "confirmed": "Confirmed", "rejected": "Rejected", "title": "MEMORY.md v{{version}} suggestion",
+      "hint": "Once confirmed it becomes trusted context for later tasks", "waiting": "Waiting for project lead {{lead}}",
+      "confirm": "Confirm", "reject": "Reject"
+    }
+  },
+  "dock": {
+    "tasks": "Tasks / PRs", "people": "People / Devices", "memory": "MEMORY.md",
+    "taskList": "Tasks", "noTasks": "No tasks yet", "prs": "Pull requests", "noPrs": "No PRs yet",
+    "cancel": "Cancel task", "requester": "Requester", "executor": "Executor", "approvers": "Approvers", "tokens": "Tokens",
+    "depth": "Depth", "reason": "Reason", "members": "Members", "owner": "Owner", "agents": "Bots", "devices": "Devices",
+    "sandbox": "sandbox {{name}}", "quota": "{{n}} per day", "editIntake": "Intake policy", "quotaLabel": "Daily quota"
+  },
+  "memory": {
+    "lead": "Project lead: {{name}}", "version": "Current v{{v}}", "pending": "v{{v}} pending",
+    "history": "History", "byAgent": "agent suggestion", "bySystem": "initial"
+  },
+  "pair": {
+    "open": "Pair device", "title": "Pair a new device", "desc": "Create a node token for a computer running the collab daemon and declare the bots it hosts.",
+    "name": "Device name", "chief": "Chief bot @handle (optional)", "coder": "Specialist bot @handle (optional)", "submit": "Create token",
+    "run": "Run on that device:", "once": "The token is shown only once. Save it now.", "note": "Running several daemons on one machine? Give each its own"
+  },
+  "event": {
+    "status": "status → {{to}}", "permission": "requested out-of-scope change: {{paths}}", "decided": "decision: {{decision}}",
+    "blocked": "policy blocked {{code}}: {{target}}", "pr": "branch pushed and PR opened", "merged": "merged {{commit}}",
+    "completed": "execution finished", "submitted": "delegation submitted", "dispatched": "sent to device", "queued": "device offline, queued",
+    "reconnected": "device reconnected", "daemon_lost": "task lost after device restart"
+  },
+  "status": {
+    "submitted": "Submitted", "pending_intake": "Awaiting intake", "accepted": "Accepted", "rejected": "Rejected", "queued": "Queued",
+    "working": "Working", "running_offline": "Running offline", "input_required": "Input required", "approval_required": "Needs approval",
+    "completed": "Completed", "failed": "Failed", "canceled": "Canceled", "unknown": "Unknown"
+  },
+  "action": { "read": "read", "edit": "edit", "execute": "run commands", "network": "network" },
+  "reason": {
+    "unauthorized": "Unauthorized", "intake_denied": "Intake denied", "quota_exceeded": "Daily quota exceeded",
+    "scope_exceeded": "Outside the grant", "action_forbidden": "Action not granted", "sandbox_denied": "Blocked by sandbox",
+    "sandbox_unavailable": "Target device has no sandbox; cross-owner work refused", "budget_exceeded": "Budget exceeded",
+    "depth_exceeded": "Delegation too deep", "duplicate": "Duplicate request", "failed": "Failed", "merge_rejected": "Merge rejected",
+    "commit_mismatch": "Branch head differs from the approved commit", "daemon_lost": "Device lost the task", "offline_grace_expired": "Device offline too long",
+    "canceled_by_user": "Canceled by a user", "unknown_target": "Unknown delegation target", "repo_not_configured": "Repository not configured on device",
+    "agent_failed": "Agent failed"
+  },
+  "pr": { "open": "Open", "merged": "Merged", "closed": "Closed" },
+  "agent": { "chief": "Chief", "specialist": "Specialist" },
+  "intake": { "manual": "Manual intake", "allowlist": "Allowlist auto-accept", "closed": "Closed" }
+}

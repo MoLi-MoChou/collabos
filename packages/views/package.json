@@ -1,0 +1,32 @@
+{
+  "name": "@collabos/views",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@collabos/core": "workspace:*",
+    "@collabos/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "react-i18next": "catalog:"
+  },
+  "peerDependencies": { "react": "*", "react-dom": "*" },
+  "devDependencies": {
+    "@collabos/eslint-config": "workspace:*",
+    "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "eslint": "catalog:",
+    "i18next": "catalog:",
+    "jsdom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
