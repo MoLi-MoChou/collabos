@@ -1,0 +1,76 @@
+/* Maps Tailwind's theme onto semantic tokens. Default palettes, type scale,
+   radii and shadows are cleared so only tokens can be used. */
+@import "tailwindcss";
+@import "./themes/light.css";
+@import "./themes/dark.css";
+
+@theme inline {
+  --color-*: initial;
+  --color-bg: var(--cos-color-bg);
+  --color-surface: var(--cos-color-surface);
+  --color-surface-2: var(--cos-color-surface-2);
+  --color-rail: var(--cos-color-rail);
+  --color-border: var(--cos-color-border);
+  --color-border-strong: var(--cos-color-border-strong);
+  --color-fg: var(--cos-color-fg);
+  --color-fg-muted: var(--cos-color-fg-muted);
+  --color-fg-subtle: var(--cos-color-fg-subtle);
+  --color-accent: var(--cos-color-accent);
+  --color-accent-fg: var(--cos-color-accent-fg);
+  --color-accent-soft: var(--cos-color-accent-soft);
+  --color-success: var(--cos-color-success);
+  --color-success-soft: var(--cos-color-success-soft);
+  --color-warn: var(--cos-color-warn);
+  --color-warn-soft: var(--cos-color-warn-soft);
+  --color-danger: var(--cos-color-danger);
+  --color-danger-soft: var(--cos-color-danger-soft);
+  --color-term-bg: var(--cos-color-term-bg);
+  --color-term-fg: var(--cos-color-term-fg);
+  --color-term-muted: var(--cos-color-term-muted);
+  --color-overlay: var(--cos-color-overlay);
+  --color-focus: var(--cos-color-focus);
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --text-*: initial;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-body: 14px;
+  --text-body--line-height: 21px;
+  --text-body-lg: 15px;
+  --text-body-lg--line-height: 23px;
+  --text-title: 16px;
+  --text-title--line-height: 22px;
+  --text-heading: 20px;
+  --text-heading--line-height: 28px;
+  --text-mono: 12.5px;
+  --text-mono--line-height: 19px;
+
+  --radius-*: initial;
+  --radius-sm: 6px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-pill: 999px;
+
+  --shadow-*: initial;
+  --shadow-card: var(--cos-shadow-card);
+  --shadow-popover: var(--cos-shadow-popover);
+
+  --font-sans: "Inter", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  *, *::before, *::after { border-color: var(--color-border); }
+  :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 1px; }
+}

@@ -1,0 +1,30 @@
+/* Grok Bot-like neutral placeholder theme (ADR-006). The only place where raw
+   color values may appear. Every theme must define the same set of tokens. */
+[data-theme="light"] {
+  color-scheme: light;
+  --cos-color-bg: #f7f7f8;
+  --cos-color-surface: #ffffff;
+  --cos-color-surface-2: #f2f2f4;
+  --cos-color-rail: #fbfbfc;
+  --cos-color-border: #e6e6ea;
+  --cos-color-border-strong: #d4d4da;
+  --cos-color-fg: #16161a;
+  --cos-color-fg-muted: #5f6068;
+  --cos-color-fg-subtle: #9a9ba3;
+  --cos-color-accent: #4f5bd5;
+  --cos-color-accent-fg: #ffffff;
+  --cos-color-accent-soft: #eef0fd;
+  --cos-color-success: #1f9d63;
+  --cos-color-success-soft: #e8f6ef;
+  --cos-color-warn: #b7791f;
+  --cos-color-warn-soft: #fdf6e7;
+  --cos-color-danger: #d14343;
+  --cos-color-danger-soft: #fcecec;
+  --cos-color-term-bg: #16171c;
+  --cos-color-term-fg: #e4e4ea;
+  --cos-color-term-muted: #8a8b96;
+  --cos-color-overlay: rgb(15 15 20 / 0.4);
+  --cos-color-focus: #4f5bd5;
+  --cos-shadow-card: 0 1px 2px rgb(16 16 24 / 0.04), 0 1px 1px rgb(16 16 24 / 0.03);
+  --cos-shadow-popover: 0 10px 30px rgb(16 16 24 / 0.12), 0 2px 6px rgb(16 16 24 / 0.06);
+}
