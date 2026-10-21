@@ -57,3 +57,6 @@ func As(err error) *Error {
 	}
 	return &Error{http.StatusInternalServerError, "common.internal", "internal error"}
 }
+
+// ErrReasonRequired is returned when a rejection has no reason (FR-CLI-303).
+var ErrReasonRequired = &Error{http.StatusBadRequest, "common.reason_required", "a reason is required to reject"}

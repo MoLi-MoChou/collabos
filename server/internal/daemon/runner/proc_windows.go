@@ -16,3 +16,7 @@ func killProcessGroup(cmd *exec.Cmd) {
 	}
 	_ = exec.Command("taskkill", "/T", "/F", "/PID", strconv.Itoa(cmd.Process.Pid)).Run()
 }
+
+// signalGroup is not supported on Windows: pause/resume reports false and the
+// server keeps the task paused at the decision layer only.
+func signalGroup(cmd *exec.Cmd, stop bool) bool { return false }

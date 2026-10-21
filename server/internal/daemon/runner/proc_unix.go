@@ -18,3 +18,15 @@ func killProcessGroup(cmd *exec.Cmd) {
 	}
 	_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 }
+
+// signalGroup stops (SIGSTOP) or continues (SIGCONT) the process group.
+func signalGroup(cmd *exec.Cmd, stop bool) bool {
+	if cmd.Process == nil {
+		return false
+	}
+	sig := syscall.SIGCONT
+	if stop {
+		sig = syscall.SIGSTOP
+	}
+	return syscall.Kill(-cmd.Process.Pid, sig) == nil
+}

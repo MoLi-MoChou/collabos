@@ -19,6 +19,8 @@ const (
 	TypeDaemonPolicyBlocked  = "DAEMON_POLICY_BLOCKED"
 	TypeMergeExecute         = "MERGE_EXECUTE"
 	TypeMergeResult          = "MERGE_RESULT"
+	TypeTaskPause            = "TASK_PAUSE"
+	TypeTaskResume           = "TASK_RESUME"
 	// Server -> UI.
 	TypeTaskEvent   = "TASK_EVENT"
 	TypeTaskUpdated = "TASK_UPDATED"
@@ -116,6 +118,8 @@ type Approver struct {
 const (
 	KindCode = "code"
 	KindChat = "chat"
+	// KindPatrol is a read-only proactive run whose findings an agent posts (scenario D).
+	KindPatrol = "patrol"
 )
 
 // ContextItem is one trust-labelled piece of context (PRD 11.4).
@@ -123,6 +127,8 @@ type ContextItem struct {
 	Type  string `json:"type"`
 	Trust string `json:"trust"`
 	Text  string `json:"text"`
+	// Source names where the item came from (e.g. "MEMORY.md v3 confirmed by 张三").
+	Source string `json:"source,omitempty"`
 }
 
 // DelegationDispatch asks a daemon to run a task.
@@ -140,6 +146,39 @@ type DelegationDispatch struct {
 	Budget     Budget        `json:"budget"`
 	Context    []ContextItem `json:"context"`
 	CrossOwner bool          `json:"cross_owner"`
+	// TraceID follows the delegation chain end to end (FR-SRV-602).
+	TraceID      string `json:"trace_id,omitempty"`
+	ParentTaskID string `json:"parent_task_id,omitempty"`
+	Depth        int    `json:"depth,omitempty"`
+	MaxDepth     int    `json:"max_depth,omitempty"`
+	// Autonomy is supervised|standard|autonomous (PRD 3.2, 6.3).
+	Autonomy string `json:"autonomy,omitempty"`
+	// Acceptance criteria the agent must address (PRD 6.1).
+	Acceptance []string `json:"acceptance,omitempty"`
+	// TestCommand, when set by the project lead, runs in the sandbox after the agent.
+	TestCommand string `json:"test_command,omitempty"`
+	// Roster lists specialists the agent may sub-delegate to (multi-level delegation).
+	Roster []string `json:"roster,omitempty"`
+}
+
+// TaskPause suspends a running task (budget or decision timeout); TaskResume continues it.
+type TaskPause struct {
+	TaskID string `json:"task_id"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// TestResult is the outcome of the project's test command (PRD 9.1 tests).
+type TestResult struct {
+	Command string `json:"command"`
+	Passed  bool   `json:"passed"`
+	Output  string `json:"output"`
+}
+
+// RichUI is an OpenUI Lang rich message carried in ACP _meta.collabos.ui (PRD 7.1.5).
+type RichUI struct {
+	Lang    string `json:"lang"`
+	Version string `json:"version"`
+	Source  string `json:"source"`
 }
 
 // TaskCancel asks a daemon to stop a task.
@@ -203,6 +242,10 @@ type DaemonTaskCompleted struct {
 	Usage      *Usage      `json:"usage,omitempty"`
 	ACPVersion int         `json:"acp_version,omitempty"`
 	DurationMs int64       `json:"duration_ms"`
+	TraceID    string      `json:"trace_id,omitempty"`
+	Tests      *TestResult `json:"tests,omitempty"`
+	UI         *RichUI     `json:"ui,omitempty"`
+	Diff       string      `json:"diff,omitempty"`
 }
 
 // PermissionRequest forwards an agent's session/request_permission.

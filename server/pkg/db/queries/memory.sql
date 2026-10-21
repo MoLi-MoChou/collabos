@@ -1,5 +1,5 @@
 -- name: LatestConfirmedMemory :one
-SELECT * FROM memory_versions WHERE project_id = $1 AND status = 'confirmed' ORDER BY version DESC LIMIT 1;
+SELECT * FROM memory_versions WHERE project_id = $1 AND status = 'confirmed' AND NOT tainted ORDER BY version DESC LIMIT 1;
 
 -- name: CreateMemoryVersion :one
 INSERT INTO memory_versions (project_id, version, content, status, source_task_id, proposed_by)

@@ -50,6 +50,9 @@ type Daemon struct {
 
 	tasksMu sync.Mutex
 	tasks   map[string]context.CancelFunc
+	ctls    map[string]*runner.Control
+	traces  map[string]string
+	lock    *os.File
 
 	waitMu  sync.Mutex
 	waiters map[string]chan protocol.PermissionDecision
@@ -84,10 +87,28 @@ func New(cfg config.Config) (*Daemon, error) {
 	if bin == "" {
 		bin = findOpencode()
 	}
-	return &Daemon{
-		cfg: cfg, log: logger.New("daemon"), journal: j, sandbox: sandbox.Detect(), ocBin: bin,
-		tasks: map[string]context.CancelFunc{}, waiters: map[string]chan protocol.PermissionDecision{},
-	}, nil
+	lock, err := acquireLock(filepath.Join(config.Home(), "daemon.lock"))
+	if err != nil {
+		_ = j.Close()
+		return nil, err
+	}
+	d := &Daemon{
+		cfg: cfg, log: logger.New("daemon"), journal: j, sandbox: sandbox.Detect(), ocBin: bin, lock: lock,
+		tasks: map[string]context.CancelFunc{}, ctls: map[string]*runner.Control{}, traces: map[string]string{},
+		waiters: map[string]chan protocol.PermissionDecision{},
+	}
+	d.gcWorktrees()
+	return d, nil
+}
+
+// gcWorktrees removes worktrees of runs that cannot resume: after a restart
+// no task is active, so every leftover task worktree is garbage.
+func (d *Daemon) gcWorktrees() {
+	for _, r := range d.cfg.Repos {
+		if ids := worktree.GC(context.Background(), r.Path, map[string]bool{}); len(ids) > 0 {
+			d.log.Info("worktree gc", "repo", r.Path, "removed", len(ids))
+		}
+	}
 }
 
 func findOpencode() string {
@@ -129,6 +150,19 @@ func (d *Daemon) Capabilities() protocol.Capabilities {
 	if p, err := exec.LookPath("gh"); err == nil {
 		tools["gh"] = toolVersion(p, "--version")
 	}
+	// Toolchain detection (FR-DAE-201).
+	for name, args := range map[string][]string{
+		"node": {"--version"}, "npm": {"--version"}, "pnpm": {"--version"}, "go": {"version"},
+		"python3": {"--version"}, "cargo": {"--version"}, "java": {"-version"}, "prlimit": {"--version"},
+	} {
+		if p, err := exec.LookPath(name); err == nil {
+			if v := toolVersion(p, args...); v != "" {
+				tools[name] = v
+			} else {
+				tools[name] = "installed"
+			}
+		}
+	}
 	agents := []string{}
 	if tools["opencode"] != "" {
 		agents = append(agents, "opencode")
@@ -153,13 +187,15 @@ func (d *Daemon) Run(ctx context.Context) error {
 		case <-time.After(backoff):
 		case <-ctx.Done():
 		}
-		if backoff < 15*time.Second {
+		if backoff < 30*time.Second {
 			backoff *= 2
-		} else {
-			backoff = 15 * time.Second
+		}
+		if backoff > 30*time.Second {
+			backoff = 30 * time.Second
 		}
 	}
 	d.cancelAll()
+	releaseLock(d.lock)
 	return d.journal.Close()
 }
 
@@ -282,7 +318,10 @@ func (d *Daemon) write(e protocol.Envelope) error {
 func (d *Daemon) report(taskID, typ string, payload any) {
 	d.sendMu.Lock()
 	defer d.sendMu.Unlock()
-	e, err := d.journal.Append(taskID, protocol.Msg(typ, payload))
+	d.tasksMu.Lock()
+	trace := d.traces[taskID]
+	d.tasksMu.Unlock()
+	e, err := d.journal.Append(taskID, protocol.MsgTrace(typ, trace, payload))
 	if err != nil {
 		d.log.Error("journal append", "err", err)
 		return
@@ -316,6 +355,35 @@ func (d *Daemon) handle(ctx context.Context, e protocol.Envelope) {
 				cancel()
 			}
 			d.tasksMu.Unlock()
+		}
+	case protocol.TypeTaskPause, protocol.TypeTaskResume:
+		var p protocol.TaskPause
+		if e.Into(&p) == nil {
+			d.tasksMu.Lock()
+			ctl := d.ctls[p.TaskID]
+			d.tasksMu.Unlock()
+			if ctl == nil {
+				return
+			}
+			if e.Type == protocol.TypeTaskPause && ctl.Pause() {
+				d.report(p.TaskID, protocol.TypeDaemonProgressStream, protocol.DaemonProgress{TaskID: p.TaskID, Kind: protocol.ProgressPhase, Phase: "paused", Text: "paused: " + p.Reason})
+			}
+			if e.Type == protocol.TypeTaskResume && ctl.Resume() {
+				d.report(p.TaskID, protocol.TypeDaemonProgressStream, protocol.DaemonProgress{TaskID: p.TaskID, Kind: protocol.ProgressPhase, Phase: "resumed", Text: "resumed"})
+			}
+		}
+	case protocol.TypeGrantUpdate:
+		var g struct {
+			TaskID string         `json:"task_id"`
+			Grant  protocol.Grant `json:"grant"`
+		}
+		if e.Into(&g) == nil {
+			d.tasksMu.Lock()
+			ctl := d.ctls[g.TaskID]
+			d.tasksMu.Unlock()
+			if ctl != nil {
+				ctl.UpdateGrant(g.Grant)
+			}
 		}
 	case protocol.TypePermissionDecision:
 		var p protocol.PermissionDecision
@@ -351,6 +419,9 @@ func (d *Daemon) activeTasks() []string {
 func (d *Daemon) cancelAll() {
 	d.tasksMu.Lock()
 	defer d.tasksMu.Unlock()
+	for _, ctl := range d.ctls {
+		ctl.Resume()
+	}
 	for _, c := range d.tasks {
 		c()
 	}
@@ -363,12 +434,16 @@ func (d *Daemon) startTask(ctx context.Context, t protocol.DelegationDispatch) {
 		return
 	}
 	tctx, cancel := context.WithCancel(ctx)
+	ctl := &runner.Control{}
 	d.tasks[t.TaskID] = cancel
+	d.ctls[t.TaskID] = ctl
+	d.traces[t.TaskID] = t.TraceID
 	d.tasksMu.Unlock()
 	go func() {
 		defer func() {
 			d.tasksMu.Lock()
 			delete(d.tasks, t.TaskID)
+			delete(d.ctls, t.TaskID)
 			d.tasksMu.Unlock()
 			cancel()
 		}()
@@ -385,6 +460,7 @@ func (d *Daemon) startTask(ctx context.Context, t protocol.DelegationDispatch) {
 		_ = os.MkdirAll(scratch, 0o700)
 		res := runner.Run(tctx, runner.Job{
 			Task: t, RepoPath: repo, Sandbox: d.sandbox, Opencode: d.ocBin, WorkDir: scratch, Egress: d.egress(),
+			Control: ctl, Limits: limits(),
 			Hooks: runner.Hooks{
 				Progress: func(p protocol.DaemonProgress) { d.report(t.TaskID, protocol.TypeDaemonProgressStream, p) },
 				Blocked:  func(p protocol.PolicyBlocked) { d.report(t.TaskID, protocol.TypeDaemonPolicyBlocked, p) },
@@ -393,6 +469,9 @@ func (d *Daemon) startTask(ctx context.Context, t protocol.DelegationDispatch) {
 		})
 		d.log.Info("task finished", "task", t.TaskID, "outcome", res.Outcome, "commit", res.Commit, "err", res.Error)
 		d.report(t.TaskID, protocol.TypeDaemonTaskCompleted, res)
+		d.tasksMu.Lock()
+		delete(d.traces, t.TaskID)
+		d.tasksMu.Unlock()
 	}()
 }
 
@@ -470,4 +549,9 @@ func (d *Daemon) egress() runner.Egress {
 	on, allow := d.cfg.Egress()
 	self, _ := os.Executable()
 	return runner.Egress{Enabled: on, Allow: allow, Bridge: self}
+}
+
+func limits() runner.Limits {
+	cpu, mem, procs := config.TaskLimits()
+	return runner.Limits{CPUSeconds: cpu, MemoryMB: mem, MaxProcs: procs}
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -46,6 +47,16 @@ func (c Config) Egress() (bool, []string) {
 		}
 	}
 	return true, allow
+}
+
+// TaskLimits reads per-task resource caps (FR-DAE-103):
+// COLLAB_TASK_CPU_SECONDS, COLLAB_TASK_MEM_MB, COLLAB_TASK_MAX_PROCS. Unset means no cap.
+func TaskLimits() (cpu, memMB, procs int) {
+	n := func(k string) int {
+		v, _ := strconv.Atoi(os.Getenv(k))
+		return v
+	}
+	return n("COLLAB_TASK_CPU_SECONDS"), n("COLLAB_TASK_MEM_MB"), n("COLLAB_TASK_MAX_PROCS")
 }
 
 // Home returns the daemon home directory.

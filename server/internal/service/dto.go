@@ -36,6 +36,13 @@ type TaskDTO struct {
 	Result          json.RawMessage `json:"result"`
 	CreatedAt       string          `json:"created_at"`
 	UpdatedAt       string          `json:"updated_at"`
+	TraceID         string          `json:"trace_id"`
+	DependsOn       json.RawMessage `json:"depends_on"`
+	ApprovalRule    string          `json:"approval_rule"`
+	Autonomy        string          `json:"autonomy"`
+	Acceptance      json.RawMessage `json:"acceptance"`
+	Tainted         bool            `json:"tainted"`
+	DecisionDue     string          `json:"decision_deadline"`
 }
 
 // TaskDTOOf maps a task row.
@@ -49,6 +56,8 @@ func TaskDTOOf(t db.Task) TaskDTO {
 		Grant: raw(t.GrantSpec, "{}"), Budget: raw(t.Budget, "{}"), Billing: raw(t.Billing, "{}"),
 		Approvers: raw(t.Approvers, "[]"), Depth: t.Depth, MaxDepth: t.MaxDepth, ReasonCode: t.ReasonCode,
 		UsedTokens: t.UsedTokens, Result: raw(t.Result, "{}"), CreatedAt: util.TS(t.CreatedAt), UpdatedAt: util.TS(t.UpdatedAt),
+		TraceID: t.TraceID, DependsOn: raw(t.DependsOn, "[]"), ApprovalRule: t.ApprovalRule, Autonomy: t.Autonomy,
+		Acceptance: raw(t.Acceptance, "[]"), Tainted: t.Tainted, DecisionDue: util.TS(t.DecisionDeadline),
 	}
 }
 
@@ -72,18 +81,25 @@ func daemonDTO(d db.Daemon, online bool) DaemonDTO {
 
 // AgentDTO is the API shape of an agent.
 type AgentDTO struct {
-	ID              string   `json:"id"`
-	OwnerID         string   `json:"owner_id"`
-	DaemonID        string   `json:"daemon_id"`
-	Name            string   `json:"name"`
-	Handle          string   `json:"handle"`
-	Kind            string   `json:"kind"`
-	Runtime         string   `json:"runtime"`
-	Model           string   `json:"model"`
-	IntakeMode      string   `json:"intake_mode"`
-	IntakeAllowlist []string `json:"intake_allowlist"`
-	DailyQuota      int32    `json:"daily_quota"`
-	Online          bool     `json:"online"`
+	ID               string   `json:"id"`
+	OwnerID          string   `json:"owner_id"`
+	DaemonID         string   `json:"daemon_id"`
+	Name             string   `json:"name"`
+	Handle           string   `json:"handle"`
+	Kind             string   `json:"kind"`
+	Runtime          string   `json:"runtime"`
+	Model            string   `json:"model"`
+	IntakeMode       string   `json:"intake_mode"`
+	IntakeAllowlist  []string `json:"intake_allowlist"`
+	DailyQuota       int32    `json:"daily_quota"`
+	Online           bool     `json:"online"`
+	Autonomy         string   `json:"autonomy"`
+	MaxConcurrent    int32    `json:"max_concurrent"`
+	MaxDurationMin   int32    `json:"max_duration_min"`
+	AllowedActions   []string `json:"allowed_actions"`
+	AllowNetwork     bool     `json:"allow_network"`
+	IntakeTimeoutMin int32    `json:"intake_timeout_min"`
+	DailyCostUnits   int64    `json:"daily_cost_units"`
 }
 
 func (s *Service) agentDTO(a db.Agent) AgentDTO {
@@ -93,7 +109,10 @@ func (s *Service) agentDTO(a db.Agent) AgentDTO {
 		ID: util.UUIDString(a.ID), OwnerID: util.UUIDString(a.OwnerID), DaemonID: util.UUIDString(a.DaemonID),
 		Name: a.Name, Handle: a.Handle, Kind: a.Kind, Runtime: a.Runtime, Model: a.Model,
 		IntakeMode: a.IntakeMode, IntakeAllowlist: allow, DailyQuota: a.DailyQuota,
-		Online: s.Daemons.Online(util.UUIDString(a.DaemonID)),
+		Online:   s.Daemons.Online(util.UUIDString(a.DaemonID)),
+		Autonomy: a.Autonomy, MaxConcurrent: a.MaxConcurrent, MaxDurationMin: a.MaxDurationMin,
+		AllowedActions: jsonStrings(a.AllowedActions), AllowNetwork: a.AllowNetwork,
+		IntakeTimeoutMin: a.IntakeTimeoutMin, DailyCostUnits: a.DailyCostUnits,
 	}
 }
 
@@ -110,6 +129,8 @@ type MessageDTO struct {
 	Card        json.RawMessage `json:"card"`
 	Trust       string          `json:"trust"`
 	CreatedAt   string          `json:"created_at"`
+	// Rich is a validated OpenUI message with its source bot/owner (PRD 7.1.5).
+	Rich json.RawMessage `json:"rich"`
 }
 
 func messageDTO(m db.Message) MessageDTO {
@@ -117,6 +138,7 @@ func messageDTO(m db.Message) MessageDTO {
 		ID: util.UUIDString(m.ID), RoomID: util.UUIDString(m.RoomID), Seq: m.Seq, SenderType: m.SenderType,
 		SenderID: util.UUIDString(m.SenderID), ClientMsgID: m.ClientMsgID.String, Body: m.Body,
 		Mentions: raw(m.Mentions, "[]"), Card: raw(m.Card, "null"), Trust: m.Trust, CreatedAt: util.TS(m.CreatedAt),
+		Rich: raw(m.Rich, "null"),
 	}
 }
 
@@ -152,10 +174,13 @@ type MemoryDTO struct {
 	ProposedBy   string `json:"proposed_by"`
 	ConfirmedBy  string `json:"confirmed_by"`
 	CreatedAt    string `json:"created_at"`
+	Trust        string `json:"trust"`
+	Tainted      bool   `json:"tainted"`
+	TaintReason  string `json:"taint_reason"`
 }
 
 func memoryDTO(m db.MemoryVersion) MemoryDTO {
-	return MemoryDTO{util.UUIDString(m.ID), util.UUIDString(m.ProjectID), m.Version, m.Content, m.Status, util.UUIDString(m.SourceTaskID), m.ProposedBy, util.UUIDString(m.ConfirmedBy), util.TS(m.CreatedAt)}
+	return MemoryDTO{util.UUIDString(m.ID), util.UUIDString(m.ProjectID), m.Version, m.Content, m.Status, util.UUIDString(m.SourceTaskID), m.ProposedBy, util.UUIDString(m.ConfirmedBy), util.TS(m.CreatedAt), m.Trust, m.Tainted, m.TaintReason}
 }
 
 // ProjectDTO is the API shape of a project.
@@ -167,6 +192,21 @@ type ProjectDTO struct {
 	Provider      string `json:"provider"`
 	LeadID        string `json:"lead_id"`
 	RoomID        string `json:"room_id"`
+	Visibility    string `json:"visibility"`
+	TestCommand   string `json:"test_command"`
+	// WebhookPath is where GitHub should deliver pull_request events.
+	WebhookPath       string `json:"webhook_path"`
+	WebhookConfigured bool   `json:"webhook_configured"`
+	MyRole            string `json:"my_role,omitempty"`
+}
+
+func projectDTOOf(p db.Project, roomID string) ProjectDTO {
+	id := util.UUIDString(p.ID)
+	return ProjectDTO{
+		ID: id, Name: p.Name, RemoteURL: p.RemoteUrl, DefaultBranch: p.DefaultBranch, Provider: p.Provider,
+		LeadID: util.UUIDString(p.LeadID), RoomID: roomID, Visibility: p.Visibility, TestCommand: p.TestCommand,
+		WebhookPath: "/api/webhooks/github/" + id, WebhookConfigured: p.WebhookSecret != "",
+	}
 }
 
 func eventDTO(e db.TaskEvent) protocol.TaskEvent {

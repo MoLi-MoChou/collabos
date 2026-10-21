@@ -28,7 +28,7 @@ func (q *Queries) AddMember(ctx context.Context, arg AddMemberParams) error {
 }
 
 const createWorkspace = `-- name: CreateWorkspace :one
-INSERT INTO workspaces (name, invite_code) VALUES ($1, $2) RETURNING id, name, invite_code, created_at
+INSERT INTO workspaces (name, invite_code) VALUES ($1, $2) RETURNING id, name, invite_code, created_at, im_webhook_url, im_kind
 `
 
 type CreateWorkspaceParams struct {
@@ -44,6 +44,8 @@ func (q *Queries) CreateWorkspace(ctx context.Context, arg CreateWorkspaceParams
 		&i.Name,
 		&i.InviteCode,
 		&i.CreatedAt,
+		&i.ImWebhookUrl,
+		&i.ImKind,
 	)
 	return i, err
 }
@@ -65,7 +67,7 @@ func (q *Queries) GetMemberRole(ctx context.Context, arg GetMemberRoleParams) (s
 }
 
 const getWorkspace = `-- name: GetWorkspace :one
-SELECT id, name, invite_code, created_at FROM workspaces WHERE id = $1
+SELECT id, name, invite_code, created_at, im_webhook_url, im_kind FROM workspaces WHERE id = $1
 `
 
 func (q *Queries) GetWorkspace(ctx context.Context, id pgtype.UUID) (Workspace, error) {
@@ -76,12 +78,14 @@ func (q *Queries) GetWorkspace(ctx context.Context, id pgtype.UUID) (Workspace, 
 		&i.Name,
 		&i.InviteCode,
 		&i.CreatedAt,
+		&i.ImWebhookUrl,
+		&i.ImKind,
 	)
 	return i, err
 }
 
 const getWorkspaceByInvite = `-- name: GetWorkspaceByInvite :one
-SELECT id, name, invite_code, created_at FROM workspaces WHERE invite_code = $1
+SELECT id, name, invite_code, created_at, im_webhook_url, im_kind FROM workspaces WHERE invite_code = $1
 `
 
 func (q *Queries) GetWorkspaceByInvite(ctx context.Context, inviteCode string) (Workspace, error) {
@@ -92,6 +96,8 @@ func (q *Queries) GetWorkspaceByInvite(ctx context.Context, inviteCode string) (
 		&i.Name,
 		&i.InviteCode,
 		&i.CreatedAt,
+		&i.ImWebhookUrl,
+		&i.ImKind,
 	)
 	return i, err
 }
@@ -136,16 +142,18 @@ func (q *Queries) ListMembers(ctx context.Context, workspaceID pgtype.UUID) ([]L
 }
 
 const listWorkspacesForUser = `-- name: ListWorkspacesForUser :many
-SELECT w.id, w.name, w.invite_code, w.created_at, m.role FROM workspaces w JOIN workspace_members m ON m.workspace_id = w.id
+SELECT w.id, w.name, w.invite_code, w.created_at, w.im_webhook_url, w.im_kind, m.role FROM workspaces w JOIN workspace_members m ON m.workspace_id = w.id
 WHERE m.user_id = $1 ORDER BY w.created_at
 `
 
 type ListWorkspacesForUserRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	Name       string             `json:"name"`
-	InviteCode string             `json:"invite_code"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	Role       string             `json:"role"`
+	ID           pgtype.UUID        `json:"id"`
+	Name         string             `json:"name"`
+	InviteCode   string             `json:"invite_code"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ImWebhookUrl string             `json:"im_webhook_url"`
+	ImKind       string             `json:"im_kind"`
+	Role         string             `json:"role"`
 }
 
 func (q *Queries) ListWorkspacesForUser(ctx context.Context, userID pgtype.UUID) ([]ListWorkspacesForUserRow, error) {
@@ -162,6 +170,8 @@ func (q *Queries) ListWorkspacesForUser(ctx context.Context, userID pgtype.UUID)
 			&i.Name,
 			&i.InviteCode,
 			&i.CreatedAt,
+			&i.ImWebhookUrl,
+			&i.ImKind,
 			&i.Role,
 		); err != nil {
 			return nil, err

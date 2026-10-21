@@ -1,0 +1,18 @@
+DROP TABLE IF EXISTS webhook_deliveries;
+DROP TABLE IF EXISTS rich_actions;
+DROP TABLE IF EXISTS context_refs;
+DROP TABLE IF EXISTS usage_ledger;
+DROP TABLE IF EXISTS budgets;
+DROP TABLE IF EXISTS project_members;
+ALTER TABLE workspaces DROP COLUMN IF EXISTS im_webhook_url, DROP COLUMN IF EXISTS im_kind;
+ALTER TABLE daemons DROP COLUMN IF EXISTS revoked_at;
+ALTER TABLE auth_tokens DROP COLUMN IF EXISTS kind, DROP COLUMN IF EXISTS label, DROP COLUMN IF EXISTS revoked_at;
+ALTER TABLE memory_versions DROP COLUMN IF EXISTS tainted, DROP COLUMN IF EXISTS taint_reason, DROP COLUMN IF EXISTS trust;
+ALTER TABLE messages DROP COLUMN IF EXISTS rich;
+ALTER TABLE projects DROP COLUMN IF EXISTS webhook_secret, DROP COLUMN IF EXISTS test_command, DROP COLUMN IF EXISTS visibility;
+ALTER TABLE permission_requests DROP COLUMN IF EXISTS layer, DROP COLUMN IF EXISTS timeout_at;
+ALTER TABLE approvals DROP COLUMN IF EXISTS category, DROP COLUMN IF EXISTS decisions, DROP COLUMN IF EXISTS timeout_at;
+ALTER TABLE agents DROP COLUMN IF EXISTS autonomy, DROP COLUMN IF EXISTS max_concurrent, DROP COLUMN IF EXISTS max_duration_min,
+    DROP COLUMN IF EXISTS allowed_actions, DROP COLUMN IF EXISTS allow_network, DROP COLUMN IF EXISTS intake_timeout_min, DROP COLUMN IF EXISTS daily_cost_units;
+ALTER TABLE tasks DROP COLUMN IF EXISTS trace_id, DROP COLUMN IF EXISTS depends_on, DROP COLUMN IF EXISTS tainted, DROP COLUMN IF EXISTS decision_deadline,
+    DROP COLUMN IF EXISTS approval_rule, DROP COLUMN IF EXISTS autonomy, DROP COLUMN IF EXISTS acceptance;

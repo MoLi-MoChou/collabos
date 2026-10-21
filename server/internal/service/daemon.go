@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/collabos/collabos/server/internal/delegation"
 	"github.com/collabos/collabos/server/internal/util"
 	db "github.com/collabos/collabos/server/pkg/db/generated"
 	"github.com/collabos/collabos/server/pkg/protocol"
@@ -169,7 +168,7 @@ func (s *Service) process(ctx context.Context, d db.Daemon, e protocol.Envelope)
 			return
 		}
 		if p.Kind == protocol.ProgressUsage && p.Usage != nil {
-			s.applyUsage(ctx, t, p.Usage)
+			s.applyUsage(ctx, t, p.Usage, true)
 			return
 		}
 		s.appendEvent(ctx, t.ID, "progress", p)
@@ -215,37 +214,46 @@ func budgetOf(t db.Task) protocol.Budget {
 	return b
 }
 
-// applyUsage records cumulative token usage and enforces the budget.
-func (s *Service) applyUsage(ctx context.Context, t db.Task, u *protocol.Usage) bool {
+// applyUsage records cumulative token usage in the task and the ledger, then
+// applies the three budget levels (90% warning, 100% pause, FR-SRV-601).
+func (s *Service) applyUsage(ctx context.Context, t db.Task, u *protocol.Usage, running bool) {
 	total := u.TotalTokens
 	if total == 0 {
 		total = u.InputTokens + u.OutputTokens + u.ThoughtTokens
 	}
 	if total > t.UsedTokens {
+		delta := total - t.UsedTokens
 		t, _ = s.Q.AddTaskUsage(ctx, db.AddTaskUsageParams{ID: t.ID, UsedTokens: total})
+		s.recordUsage(ctx, t, delta, true)
 		s.broadcast(t.WorkspaceID, protocol.TypeTaskUpdated, protocol.TaskUpdated{TaskID: util.UUIDString(t.ID), Status: protocol.TaskStatus(t.Status)})
 	}
-	b := budgetOf(t)
-	if b.MaxTokens > 0 && t.UsedTokens > b.MaxTokens {
-		if nt, err := s.setStatus(ctx, t, protocol.StatusFailed, delegation.CodeBudgetExceeded); err == nil {
-			s.Daemons.Send(util.UUIDString(t.DaemonID), protocol.Msg(protocol.TypeTaskCancel, protocol.TaskCancel{TaskID: util.UUIDString(t.ID), Reason: delegation.CodeBudgetExceeded}))
-			s.Audit(ctx, t.WorkspaceID, "system", "budget", "task.budget_exceeded", "task", util.UUIDString(t.ID), map[string]any{"used": t.UsedTokens, "max": b.MaxTokens})
-			_, _ = s.systemCard(ctx, nt.RoomID, "任务超出预算已终止："+nt.Title, Card{"type": "notice", "code": delegation.CodeBudgetExceeded, "task_id": util.UUIDString(t.ID)})
-		}
-		return true
+	if running {
+		s.checkBudgets(ctx, t)
 	}
-	return false
 }
 
 func (s *Service) taskCompleted(ctx context.Context, t db.Task, c protocol.DaemonTaskCompleted) {
 	s.appendEvent(ctx, t.ID, "completed", c)
 	result := util.JSON(c)
-	if c.Usage != nil && s.applyUsage(ctx, t, c.Usage) {
-		_, _ = s.Q.SetTaskResult(ctx, db.SetTaskResultParams{ID: t.ID, Status: string(protocol.StatusFailed), Result: result})
-		return
+	if c.Usage != nil {
+		s.applyUsage(ctx, t, c.Usage, false)
 	}
 	t, _ = s.Q.GetTask(ctx, t.ID)
+	if t.UsedTokens == 0 && c.Usage == nil {
+		s.recordUsage(ctx, t, 0, false) // usage unknown: recorded as such, never estimated
+	}
 	if t.Status == string(protocol.StatusCanceled) || t.Status == string(protocol.StatusFailed) {
+		return
+	}
+	if t.Kind == protocol.KindPatrol {
+		s.finishPatrol(ctx, t, c)
+		to := protocol.StatusCompleted
+		if c.Outcome != protocol.OutcomeCompleted {
+			to = protocol.StatusFailed
+		}
+		if nt, err := s.setStatus(ctx, t, to, c.ReasonCode); err == nil {
+			_, _ = s.Q.SetTaskResult(ctx, db.SetTaskResultParams{ID: nt.ID, Status: nt.Status, Result: result})
+		}
 		return
 	}
 	if t.Kind == protocol.KindChat {
@@ -259,14 +267,19 @@ func (s *Service) taskCompleted(ctx context.Context, t db.Task, c protocol.Daemo
 		}
 		return
 	}
+	if c.Outcome == protocol.OutcomeCompleted {
+		s.postAgentReport(ctx, t, c)
+		defer s.subDelegate(ctx, t, c.Summary)
+	}
 	switch {
 	case c.Outcome == protocol.OutcomeCompleted && c.Commit != "" && c.Pushed:
-		nt, err := s.setStatus(ctx, t, protocol.StatusApproval, "")
+		nt, err := s.setStatus(ctx, t, protocol.StatusApproval, ReasonAwaitingMerge)
 		if err != nil {
 			return
 		}
 		_, _ = s.Q.SetTaskResult(ctx, db.SetTaskResultParams{ID: nt.ID, Status: nt.Status, Result: result})
 		s.openPullRequest(ctx, nt, c)
+		s.releaseSlot(ctx, nt)
 	case c.Outcome == protocol.OutcomeCompleted:
 		nt, err := s.setStatus(ctx, t, protocol.StatusCompleted, "")
 		if err != nil {

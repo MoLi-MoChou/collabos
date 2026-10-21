@@ -13,7 +13,7 @@ import (
 
 const createProject = `-- name: CreateProject :one
 INSERT INTO projects (workspace_id, name, remote_url, default_branch, provider, lead_id)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at, webhook_secret, test_command, visibility
 `
 
 type CreateProjectParams struct {
@@ -44,12 +44,15 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 		&i.Provider,
 		&i.LeadID,
 		&i.CreatedAt,
+		&i.WebhookSecret,
+		&i.TestCommand,
+		&i.Visibility,
 	)
 	return i, err
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at FROM projects WHERE id = $1
+SELECT id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at, webhook_secret, test_command, visibility FROM projects WHERE id = $1
 `
 
 func (q *Queries) GetProject(ctx context.Context, id pgtype.UUID) (Project, error) {
@@ -64,12 +67,15 @@ func (q *Queries) GetProject(ctx context.Context, id pgtype.UUID) (Project, erro
 		&i.Provider,
 		&i.LeadID,
 		&i.CreatedAt,
+		&i.WebhookSecret,
+		&i.TestCommand,
+		&i.Visibility,
 	)
 	return i, err
 }
 
 const listProjects = `-- name: ListProjects :many
-SELECT id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at FROM projects WHERE workspace_id = $1 ORDER BY created_at
+SELECT id, workspace_id, name, remote_url, default_branch, provider, lead_id, created_at, webhook_secret, test_command, visibility FROM projects WHERE workspace_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListProjects(ctx context.Context, workspaceID pgtype.UUID) ([]Project, error) {
@@ -90,6 +96,9 @@ func (q *Queries) ListProjects(ctx context.Context, workspaceID pgtype.UUID) ([]
 			&i.Provider,
 			&i.LeadID,
 			&i.CreatedAt,
+			&i.WebhookSecret,
+			&i.TestCommand,
+			&i.Visibility,
 		); err != nil {
 			return nil, err
 		}

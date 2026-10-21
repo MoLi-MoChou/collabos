@@ -42,7 +42,7 @@ func (q *Queries) AppendAudit(ctx context.Context, arg AppendAuditParams) error 
 const createMemoryVersion = `-- name: CreateMemoryVersion :one
 INSERT INTO memory_versions (project_id, version, content, status, source_task_id, proposed_by)
 VALUES ($1, (SELECT COALESCE(MAX(version), 0) + 1 FROM memory_versions WHERE project_id = $1), $2, $3, $4, $5)
-RETURNING id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at
+RETURNING id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at, tainted, taint_reason, trust
 `
 
 type CreateMemoryVersionParams struct {
@@ -73,13 +73,16 @@ func (q *Queries) CreateMemoryVersion(ctx context.Context, arg CreateMemoryVersi
 		&i.ConfirmedBy,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Tainted,
+		&i.TaintReason,
+		&i.Trust,
 	)
 	return i, err
 }
 
 const decideMemoryVersion = `-- name: DecideMemoryVersion :one
 UPDATE memory_versions SET status = $2, confirmed_by = $3, decided_at = now()
-WHERE id = $1 AND status = 'pending' RETURNING id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at
+WHERE id = $1 AND status = 'pending' RETURNING id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at, tainted, taint_reason, trust
 `
 
 type DecideMemoryVersionParams struct {
@@ -102,12 +105,15 @@ func (q *Queries) DecideMemoryVersion(ctx context.Context, arg DecideMemoryVersi
 		&i.ConfirmedBy,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Tainted,
+		&i.TaintReason,
+		&i.Trust,
 	)
 	return i, err
 }
 
 const getMemoryVersion = `-- name: GetMemoryVersion :one
-SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at FROM memory_versions WHERE id = $1
+SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at, tainted, taint_reason, trust FROM memory_versions WHERE id = $1
 `
 
 func (q *Queries) GetMemoryVersion(ctx context.Context, id pgtype.UUID) (MemoryVersion, error) {
@@ -124,12 +130,15 @@ func (q *Queries) GetMemoryVersion(ctx context.Context, id pgtype.UUID) (MemoryV
 		&i.ConfirmedBy,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Tainted,
+		&i.TaintReason,
+		&i.Trust,
 	)
 	return i, err
 }
 
 const latestConfirmedMemory = `-- name: LatestConfirmedMemory :one
-SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at FROM memory_versions WHERE project_id = $1 AND status = 'confirmed' ORDER BY version DESC LIMIT 1
+SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at, tainted, taint_reason, trust FROM memory_versions WHERE project_id = $1 AND status = 'confirmed' AND NOT tainted ORDER BY version DESC LIMIT 1
 `
 
 func (q *Queries) LatestConfirmedMemory(ctx context.Context, projectID pgtype.UUID) (MemoryVersion, error) {
@@ -146,6 +155,9 @@ func (q *Queries) LatestConfirmedMemory(ctx context.Context, projectID pgtype.UU
 		&i.ConfirmedBy,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Tainted,
+		&i.TaintReason,
+		&i.Trust,
 	)
 	return i, err
 }
@@ -190,7 +202,7 @@ func (q *Queries) ListAudit(ctx context.Context, arg ListAuditParams) ([]AuditLo
 }
 
 const listMemoryVersions = `-- name: ListMemoryVersions :many
-SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at FROM memory_versions WHERE project_id = $1 ORDER BY version DESC
+SELECT id, project_id, version, content, status, source_task_id, proposed_by, confirmed_by, created_at, decided_at, tainted, taint_reason, trust FROM memory_versions WHERE project_id = $1 ORDER BY version DESC
 `
 
 func (q *Queries) ListMemoryVersions(ctx context.Context, projectID pgtype.UUID) ([]MemoryVersion, error) {
@@ -213,6 +225,9 @@ func (q *Queries) ListMemoryVersions(ctx context.Context, projectID pgtype.UUID)
 			&i.ConfirmedBy,
 			&i.CreatedAt,
 			&i.DecidedAt,
+			&i.Tainted,
+			&i.TaintReason,
+			&i.Trust,
 		); err != nil {
 			return nil, err
 		}

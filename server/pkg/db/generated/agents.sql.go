@@ -27,7 +27,7 @@ func (q *Queries) CountAcceptedToday(ctx context.Context, targetAgentID pgtype.U
 
 const createAgent = `-- name: CreateAgent :one
 INSERT INTO agents (workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at, autonomy, max_concurrent, max_duration_min, allowed_actions, allow_network, intake_timeout_min, daily_cost_units
 `
 
 type CreateAgentParams struct {
@@ -67,12 +67,19 @@ func (q *Queries) CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent
 		&i.IntakeAllowlist,
 		&i.DailyQuota,
 		&i.CreatedAt,
+		&i.Autonomy,
+		&i.MaxConcurrent,
+		&i.MaxDurationMin,
+		&i.AllowedActions,
+		&i.AllowNetwork,
+		&i.IntakeTimeoutMin,
+		&i.DailyCostUnits,
 	)
 	return i, err
 }
 
 const getAgent = `-- name: GetAgent :one
-SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at FROM agents WHERE id = $1
+SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at, autonomy, max_concurrent, max_duration_min, allowed_actions, allow_network, intake_timeout_min, daily_cost_units FROM agents WHERE id = $1
 `
 
 func (q *Queries) GetAgent(ctx context.Context, id pgtype.UUID) (Agent, error) {
@@ -92,12 +99,19 @@ func (q *Queries) GetAgent(ctx context.Context, id pgtype.UUID) (Agent, error) {
 		&i.IntakeAllowlist,
 		&i.DailyQuota,
 		&i.CreatedAt,
+		&i.Autonomy,
+		&i.MaxConcurrent,
+		&i.MaxDurationMin,
+		&i.AllowedActions,
+		&i.AllowNetwork,
+		&i.IntakeTimeoutMin,
+		&i.DailyCostUnits,
 	)
 	return i, err
 }
 
 const getAgentByHandle = `-- name: GetAgentByHandle :one
-SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at FROM agents WHERE workspace_id = $1 AND handle = $2
+SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at, autonomy, max_concurrent, max_duration_min, allowed_actions, allow_network, intake_timeout_min, daily_cost_units FROM agents WHERE workspace_id = $1 AND handle = $2
 `
 
 type GetAgentByHandleParams struct {
@@ -122,12 +136,19 @@ func (q *Queries) GetAgentByHandle(ctx context.Context, arg GetAgentByHandlePara
 		&i.IntakeAllowlist,
 		&i.DailyQuota,
 		&i.CreatedAt,
+		&i.Autonomy,
+		&i.MaxConcurrent,
+		&i.MaxDurationMin,
+		&i.AllowedActions,
+		&i.AllowNetwork,
+		&i.IntakeTimeoutMin,
+		&i.DailyCostUnits,
 	)
 	return i, err
 }
 
 const listAgents = `-- name: ListAgents :many
-SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at FROM agents WHERE workspace_id = $1 ORDER BY created_at
+SELECT id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at, autonomy, max_concurrent, max_duration_min, allowed_actions, allow_network, intake_timeout_min, daily_cost_units FROM agents WHERE workspace_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListAgents(ctx context.Context, workspaceID pgtype.UUID) ([]Agent, error) {
@@ -153,6 +174,13 @@ func (q *Queries) ListAgents(ctx context.Context, workspaceID pgtype.UUID) ([]Ag
 			&i.IntakeAllowlist,
 			&i.DailyQuota,
 			&i.CreatedAt,
+			&i.Autonomy,
+			&i.MaxConcurrent,
+			&i.MaxDurationMin,
+			&i.AllowedActions,
+			&i.AllowNetwork,
+			&i.IntakeTimeoutMin,
+			&i.DailyCostUnits,
 		); err != nil {
 			return nil, err
 		}
@@ -165,7 +193,7 @@ func (q *Queries) ListAgents(ctx context.Context, workspaceID pgtype.UUID) ([]Ag
 }
 
 const updateIntakePolicy = `-- name: UpdateIntakePolicy :one
-UPDATE agents SET intake_mode = $2, intake_allowlist = $3, daily_quota = $4 WHERE id = $1 RETURNING id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at
+UPDATE agents SET intake_mode = $2, intake_allowlist = $3, daily_quota = $4 WHERE id = $1 RETURNING id, workspace_id, owner_id, daemon_id, name, handle, kind, runtime, model, intake_mode, intake_allowlist, daily_quota, created_at, autonomy, max_concurrent, max_duration_min, allowed_actions, allow_network, intake_timeout_min, daily_cost_units
 `
 
 type UpdateIntakePolicyParams struct {
@@ -197,6 +225,13 @@ func (q *Queries) UpdateIntakePolicy(ctx context.Context, arg UpdateIntakePolicy
 		&i.IntakeAllowlist,
 		&i.DailyQuota,
 		&i.CreatedAt,
+		&i.Autonomy,
+		&i.MaxConcurrent,
+		&i.MaxDurationMin,
+		&i.AllowedActions,
+		&i.AllowNetwork,
+		&i.IntakeTimeoutMin,
+		&i.DailyCostUnits,
 	)
 	return i, err
 }

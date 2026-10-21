@@ -150,6 +150,34 @@ func DiffStat(ctx context.Context, wt, commit string) string {
 	return out
 }
 
+// Diff returns the commit's patch, truncated to max bytes (diff preview, FR-CLI-203).
+func Diff(ctx context.Context, wt, commit string, max int) string {
+	out, _ := gitRaw(ctx, wt, "show", "--format=", "--no-color", commit)
+	if len(out) > max {
+		out = out[:max] + "\n… (diff truncated)\n"
+	}
+	return out
+}
+
+// GC removes task worktrees and branches left behind by crashed runs, except
+// those in keep (PRD 7.2.3 worktree GC). It returns the removed task ids.
+func GC(ctx context.Context, repo string, keep map[string]bool) []string {
+	dir := filepath.Join(repo, ".collabos", "worktrees")
+	entries, _ := os.ReadDir(dir)
+	var removed []string
+	for _, e := range entries {
+		id, ok := strings.CutPrefix(e.Name(), "task-")
+		if !ok || !e.IsDir() || keep[id] {
+			continue
+		}
+		if Remove(ctx, repo, id) == nil {
+			removed = append(removed, id)
+		}
+	}
+	_, _ = Git(ctx, repo, "worktree", "prune")
+	return removed
+}
+
 // Push pushes the task branch to origin using the local user's credentials.
 func Push(ctx context.Context, wt, branch string) error {
 	_, err := Git(ctx, wt, "push", "--force-with-lease", "origin", "HEAD:refs/heads/"+branch)

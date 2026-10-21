@@ -46,6 +46,7 @@ func main() {
 	}
 	svc := service.New(pool, cfg)
 	h := handler.New(svc, os.Getenv("COLLAB_WEB_DIR"))
+	go svc.RunSweeper(ctx)
 	srv := &http.Server{Addr: cfg.Addr, Handler: h.Router(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		<-ctx.Done()

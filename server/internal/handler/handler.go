@@ -54,15 +54,22 @@ func sameHost(origin, host string) bool {
 // Router builds the chi router.
 func (h *Handler) Router() http.Handler {
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, h.cors)
+	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, h.cors, apiV1)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 	r.Post("/api/auth/dev-login", h.devLogin)
+	r.Post("/api/auth/refresh", h.refresh)
+	r.Post("/api/auth/logout", h.logout)
+	r.Get("/api/openapi.yaml", h.openapi)
+	r.Post("/api/webhooks/github/{id}", h.githubWebhook)
 	r.Get("/api/config", h.publicConfig)
 	r.Get("/ws", h.uiWS)
 	r.Get("/daemon/ws", h.daemonWS)
 	r.Group(func(r chi.Router) {
 		r.Use(h.requireUser)
 		r.Get("/api/me", h.me)
+		r.Get("/api/tokens", h.listTokens)
+		r.Post("/api/tokens", h.createToken)
+		r.Delete("/api/tokens/{id}", h.revokeToken)
 		r.Group(func(r chi.Router) {
 			r.Use(h.requireWorkspace)
 			r.Get("/api/members", h.listMembers)
@@ -90,6 +97,24 @@ func (h *Handler) Router() http.Handler {
 			r.Get("/api/pull-requests", h.listPRs)
 			r.Post("/api/approvals/{id}/decide", h.decideMerge)
 			r.Get("/api/audit", h.listAudit)
+			r.Patch("/api/projects/{id}/settings", h.projectSettings)
+			r.Get("/api/projects/{id}/members", h.listProjectMembers)
+			r.Post("/api/projects/{id}/members", h.setProjectMember)
+			r.Delete("/api/projects/{id}/members/{uid}", h.removeProjectMember)
+			r.Post("/api/projects/{id}/memory", h.editMemory)
+			r.Post("/api/memory/{id}/taint", h.taintMemory)
+			r.Get("/api/memory/{id}/references", h.memoryRefs)
+			r.Post("/api/messages/{id}/actions", h.richAction)
+			r.Post("/api/messages/{id}/to-task", h.postToTask)
+			r.Patch("/api/agents/{id}/policy", h.agentPolicy)
+			r.Post("/api/agents/{id}/patrol", h.patrol)
+			r.Delete("/api/daemons/{id}", h.revokeDaemon)
+			r.Post("/api/tasks/{id}/nudge", h.nudge)
+			r.Post("/api/tasks/{id}/budget", h.expandBudget)
+			r.Get("/api/traces/{id}", h.trace)
+			r.Get("/api/usage", h.usage)
+			r.Put("/api/budgets", h.setBudget)
+			r.Patch("/api/workspace/im", h.setIM)
 		})
 	})
 	if h.WebDir != "" {
@@ -223,8 +248,8 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listProjects(w http.ResponseWriter, r *http.Request) {
-	ws, _ := ids(r)
-	v, err := h.S.ListProjects(r.Context(), ws)
+	ws, u := ids(r)
+	v, err := h.S.ListProjectsFor(r.Context(), ws, u)
 	respond(w, v, err)
 }
 
@@ -257,13 +282,17 @@ func (h *Handler) decideMemory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listRooms(w http.ResponseWriter, r *http.Request) {
-	ws, _ := ids(r)
-	v, err := h.S.ListRooms(r.Context(), ws)
+	ws, u := ids(r)
+	v, err := h.S.ListRoomsFor(r.Context(), ws, u)
 	respond(w, v, err)
 }
 
 func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) {
-	ws, _ := ids(r)
+	ws, u := ids(r)
+	if err := h.S.RoomAccess(r.Context(), ws, u, chi.URLParam(r, "id"), false); err != nil {
+		writeErr(w, err)
+		return
+	}
 	after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
 	v, err := h.S.ListMessages(r.Context(), ws, chi.URLParam(r, "id"), after)
 	respond(w, v, err)
@@ -476,6 +505,8 @@ func (h *Handler) daemonWS(w http.ResponseWriter, r *http.Request) {
 	}
 	c := wsconn.Wrap(raw)
 	defer c.Close()
+	// FR-SRV-102: three missed heartbeats (plus slack) mark the daemon offline.
+	c.SetReadTimeout(3*h.S.Cfg.HeartbeatInterval + 5*time.Second)
 	ctx := context.Background()
 	first, err := c.Read(ctx)
 	if err != nil || first.Type != protocol.TypeClientHandshake {

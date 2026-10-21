@@ -29,7 +29,7 @@ func (q *Queries) AdvanceDaemonAck(ctx context.Context, arg AdvanceDaemonAckPara
 
 const createDaemon = `-- name: CreateDaemon :one
 INSERT INTO daemons (workspace_id, owner_id, name, node_token_hash)
-VALUES ($1, $2, $3, $4) RETURNING id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at
+VALUES ($1, $2, $3, $4) RETURNING id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at, revoked_at
 `
 
 type CreateDaemonParams struct {
@@ -58,6 +58,7 @@ func (q *Queries) CreateDaemon(ctx context.Context, arg CreateDaemonParams) (Dae
 		&i.LastAckedSeq,
 		&i.LastSeenAt,
 		&i.CreatedAt,
+		&i.RevokedAt,
 	)
 	return i, err
 }
@@ -77,7 +78,7 @@ func (q *Queries) DeleteDaemon(ctx context.Context, arg DeleteDaemonParams) erro
 }
 
 const getDaemon = `-- name: GetDaemon :one
-SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at FROM daemons WHERE id = $1
+SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at, revoked_at FROM daemons WHERE id = $1
 `
 
 func (q *Queries) GetDaemon(ctx context.Context, id pgtype.UUID) (Daemon, error) {
@@ -94,12 +95,13 @@ func (q *Queries) GetDaemon(ctx context.Context, id pgtype.UUID) (Daemon, error)
 		&i.LastAckedSeq,
 		&i.LastSeenAt,
 		&i.CreatedAt,
+		&i.RevokedAt,
 	)
 	return i, err
 }
 
 const getDaemonByToken = `-- name: GetDaemonByToken :one
-SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at FROM daemons WHERE node_token_hash = $1
+SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at, revoked_at FROM daemons WHERE node_token_hash = $1 AND revoked_at IS NULL
 `
 
 func (q *Queries) GetDaemonByToken(ctx context.Context, nodeTokenHash string) (Daemon, error) {
@@ -116,12 +118,13 @@ func (q *Queries) GetDaemonByToken(ctx context.Context, nodeTokenHash string) (D
 		&i.LastAckedSeq,
 		&i.LastSeenAt,
 		&i.CreatedAt,
+		&i.RevokedAt,
 	)
 	return i, err
 }
 
 const listDaemons = `-- name: ListDaemons :many
-SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at FROM daemons WHERE workspace_id = $1 ORDER BY created_at
+SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at, revoked_at FROM daemons WHERE workspace_id = $1 ORDER BY created_at
 `
 
 func (q *Queries) ListDaemons(ctx context.Context, workspaceID pgtype.UUID) ([]Daemon, error) {
@@ -144,6 +147,7 @@ func (q *Queries) ListDaemons(ctx context.Context, workspaceID pgtype.UUID) ([]D
 			&i.LastAckedSeq,
 			&i.LastSeenAt,
 			&i.CreatedAt,
+			&i.RevokedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -156,7 +160,7 @@ func (q *Queries) ListDaemons(ctx context.Context, workspaceID pgtype.UUID) ([]D
 }
 
 const listDaemonsForOwner = `-- name: ListDaemonsForOwner :many
-SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at FROM daemons WHERE workspace_id = $1 AND owner_id = $2 ORDER BY created_at
+SELECT id, workspace_id, owner_id, name, node_token_hash, status, capabilities, last_acked_seq, last_seen_at, created_at, revoked_at FROM daemons WHERE workspace_id = $1 AND owner_id = $2 ORDER BY created_at
 `
 
 type ListDaemonsForOwnerParams struct {
@@ -184,6 +188,7 @@ func (q *Queries) ListDaemonsForOwner(ctx context.Context, arg ListDaemonsForOwn
 			&i.LastAckedSeq,
 			&i.LastSeenAt,
 			&i.CreatedAt,
+			&i.RevokedAt,
 		); err != nil {
 			return nil, err
 		}

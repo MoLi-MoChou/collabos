@@ -14,10 +14,11 @@ import (
 
 // Conn is a websocket with a buffered, single-writer send queue.
 type Conn struct {
-	ws     *websocket.Conn
-	send   chan []byte
-	once   sync.Once
-	closed chan struct{}
+	ws          *websocket.Conn
+	send        chan []byte
+	once        sync.Once
+	closed      chan struct{}
+	readTimeout time.Duration
 }
 
 const (
@@ -31,7 +32,7 @@ func Wrap(ws *websocket.Conn) *Conn {
 	c := &Conn{ws: ws, send: make(chan []byte, 256), closed: make(chan struct{})}
 	ws.SetReadLimit(4 << 20)
 	_ = ws.SetReadDeadline(time.Now().Add(pongWait))
-	ws.SetPongHandler(func(string) error { return ws.SetReadDeadline(time.Now().Add(pongWait)) })
+	ws.SetPongHandler(func(string) error { return ws.SetReadDeadline(time.Now().Add(c.timeout())) })
 	go c.writePump()
 	return c
 }
@@ -68,7 +69,7 @@ func (c *Conn) Read(ctx context.Context) (protocol.Envelope, error) {
 		c.Close()
 		return protocol.Envelope{}, err
 	}
-	_ = c.ws.SetReadDeadline(time.Now().Add(pongWait))
+	_ = c.ws.SetReadDeadline(time.Now().Add(c.timeout()))
 	return protocol.Decode(data)
 }
 
@@ -93,4 +94,18 @@ func (c *Conn) writePump() {
 			}
 		}
 	}
+}
+
+// SetReadTimeout sets how long the peer may stay silent (no frame, no pong)
+// before the connection is dropped; daemons use 3 missed heartbeats (FR-SRV-102).
+func (c *Conn) SetReadTimeout(d time.Duration) {
+	c.readTimeout = d
+	_ = c.ws.SetReadDeadline(time.Now().Add(d))
+}
+
+func (c *Conn) timeout() time.Duration {
+	if c.readTimeout > 0 {
+		return c.readTimeout
+	}
+	return pongWait
 }

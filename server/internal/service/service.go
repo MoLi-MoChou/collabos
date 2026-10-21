@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"net/http"
 	"sync"
 	"time"
 
@@ -34,13 +35,21 @@ type Service struct {
 	taskMu  sync.Mutex             // serializes status transitions
 	roomMu  sync.Mutex             // serializes room seq allocation
 	frameMu sync.Map               // daemon id -> *sync.Mutex (ordered frame handling)
+
+	warned  sync.Map // task id -> struct{} once the 90% task-budget warning was sent
+	nudgeMu sync.Mutex
+	nudged  map[string]time.Time // task/user -> last nudge
+	// HTTPClient sends outbound IM notifications.
+	HTTPClient *http.Client
 }
 
 // New builds a service.
 func New(pool *pgxpool.Pool, cfg config.Server) *Service {
+	cfg.Defaults()
 	return &Service{
 		Pool: pool, Q: db.New(pool), UI: realtime.NewHub(), Daemons: daemonws.NewHub(),
 		Cfg: cfg, log: logger.New("service"), grace: map[string]*time.Timer{},
+		nudged: map[string]time.Time{}, HTTPClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -99,4 +108,8 @@ func raw(b []byte, def string) json.RawMessage {
 		return json.RawMessage(def)
 	}
 	return json.RawMessage(b)
+}
+
+func auditDTO(r db.AuditLog) AuditEntry {
+	return AuditEntry{r.ID, r.ActorType, r.ActorID, r.Action, r.TargetType, r.TargetID, raw(r.Detail, "{}"), util.TS(r.CreatedAt)}
 }

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -46,6 +45,9 @@ type LoginResult struct {
 	Email       string `json:"email"`
 	Handle      string `json:"handle"`
 	WorkspaceID string `json:"workspace_id"`
+	// RefreshToken rotates via POST /api/auth/refresh (FR-SRV-101).
+	RefreshToken string `json:"refresh_token"`
+	ExpiresAt    string `json:"expires_at"`
 }
 
 // DevLogin creates or reuses a user by email and issues a 90-day token. With
@@ -115,14 +117,11 @@ func (s *Service) DevLogin(ctx context.Context, in LoginInput) (LoginResult, err
 			wsID = wss[0].ID
 		}
 	}
-	tok := auth.NewToken(auth.UserTokenPrefix)
-	if err := s.Q.CreateAuthToken(ctx, db.CreateAuthTokenParams{
-		TokenHash: auth.Hash(tok), UserID: u.ID,
-		ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(90 * 24 * time.Hour), Valid: true},
-	}); err != nil {
+	pair, err := s.issuePair(ctx, u.ID)
+	if err != nil {
 		return LoginResult{}, err
 	}
-	return LoginResult{Token: tok, UserID: util.UUIDString(u.ID), Name: u.Name, Email: u.Email, Handle: u.Handle, WorkspaceID: util.UUIDString(wsID)}, nil
+	return LoginResult{Token: pair.Token, RefreshToken: pair.RefreshToken, ExpiresAt: pair.ExpiresAt, UserID: util.UUIDString(u.ID), Name: u.Name, Email: u.Email, Handle: u.Handle, WorkspaceID: util.UUIDString(wsID)}, nil
 }
 
 // Authenticate resolves a user token.
@@ -257,11 +256,29 @@ func (s *Service) CreateProject(ctx context.Context, wsID, actorID string, in Pr
 	}
 	s.Audit(ctx, ws, "user", actorID, "project.create", "project", util.UUIDString(p.ID), in)
 	s.dock(ws, "projects")
-	return ProjectDTO{util.UUIDString(p.ID), p.Name, p.RemoteUrl, p.DefaultBranch, p.Provider, util.UUIDString(p.LeadID), util.UUIDString(r.ID)}, nil
+	d := projectDTOOf(p, util.UUIDString(r.ID))
+	d.MyRole = RoleLead
+	return d, nil
 }
 
 // ListProjects lists projects with their room ids.
 func (s *Service) ListProjects(ctx context.Context, wsID string) ([]ProjectDTO, error) {
+	return s.ListProjectsFor(ctx, wsID, "")
+}
+
+// projectDTO maps a project with its room id.
+func (s *Service) projectDTO(p db.Project) ProjectDTO {
+	rooms, _ := s.Q.ListRooms(context.Background(), p.WorkspaceID)
+	for _, r := range rooms {
+		if r.ProjectID == p.ID {
+			return projectDTOOf(p, util.UUIDString(r.ID))
+		}
+	}
+	return projectDTOOf(p, "")
+}
+
+// ListProjectsFor lists the projects userID can access ("" = all).
+func (s *Service) ListProjectsFor(ctx context.Context, wsID, userID string) ([]ProjectDTO, error) {
 	ws := util.MustUUID(wsID)
 	ps, err := s.Q.ListProjects(ctx, ws)
 	if err != nil {
@@ -277,8 +294,13 @@ func (s *Service) ListProjects(ctx context.Context, wsID string) ([]ProjectDTO, 
 	}
 	out := make([]ProjectDTO, 0, len(ps))
 	for _, p := range ps {
-		id := util.UUIDString(p.ID)
-		out = append(out, ProjectDTO{id, p.Name, p.RemoteUrl, p.DefaultBranch, p.Provider, util.UUIDString(p.LeadID), byProject[id]})
+		d := projectDTOOf(p, byProject[util.UUIDString(p.ID)])
+		if userID != "" {
+			if d.MyRole = s.projectRole(ctx, p, userID); d.MyRole == "" {
+				continue
+			}
+		}
+		out = append(out, d)
 	}
 	return out, nil
 }

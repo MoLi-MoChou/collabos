@@ -81,3 +81,6 @@ func (e Envelope) Into(v any) error {
 
 // Msg is MustNew with a fresh trace id.
 func Msg(typ string, payload any) Envelope { return MustNew(typ, "", payload) }
+
+// MsgTrace builds an envelope that carries an existing trace_id.
+func MsgTrace(typ, traceID string, payload any) Envelope { return MustNew(typ, traceID, payload) }

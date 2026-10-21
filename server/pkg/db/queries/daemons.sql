@@ -3,7 +3,7 @@ INSERT INTO daemons (workspace_id, owner_id, name, node_token_hash)
 VALUES ($1, $2, $3, $4) RETURNING *;
 
 -- name: GetDaemonByToken :one
-SELECT * FROM daemons WHERE node_token_hash = $1;
+SELECT * FROM daemons WHERE node_token_hash = $1 AND revoked_at IS NULL;
 
 -- name: GetDaemon :one
 SELECT * FROM daemons WHERE id = $1;

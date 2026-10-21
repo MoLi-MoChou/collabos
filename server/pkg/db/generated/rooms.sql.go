@@ -36,7 +36,7 @@ func (q *Queries) CreateRoom(ctx context.Context, arg CreateRoomParams) (Room, e
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at FROM messages WHERE id = $1
+SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich FROM messages WHERE id = $1
 `
 
 func (q *Queries) GetMessage(ctx context.Context, id pgtype.UUID) (Message, error) {
@@ -54,12 +54,13 @@ func (q *Queries) GetMessage(ctx context.Context, id pgtype.UUID) (Message, erro
 		&i.Card,
 		&i.Trust,
 		&i.CreatedAt,
+		&i.Rich,
 	)
 	return i, err
 }
 
 const getMessageByClientID = `-- name: GetMessageByClientID :one
-SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at FROM messages WHERE room_id = $1 AND client_msg_id = $2
+SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich FROM messages WHERE room_id = $1 AND client_msg_id = $2
 `
 
 type GetMessageByClientIDParams struct {
@@ -82,6 +83,7 @@ func (q *Queries) GetMessageByClientID(ctx context.Context, arg GetMessageByClie
 		&i.Card,
 		&i.Trust,
 		&i.CreatedAt,
+		&i.Rich,
 	)
 	return i, err
 }
@@ -106,7 +108,7 @@ func (q *Queries) GetRoom(ctx context.Context, id pgtype.UUID) (Room, error) {
 
 const insertMessage = `-- name: InsertMessage :one
 INSERT INTO messages (room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich
 `
 
 type InsertMessageParams struct {
@@ -146,12 +148,13 @@ func (q *Queries) InsertMessage(ctx context.Context, arg InsertMessageParams) (M
 		&i.Card,
 		&i.Trust,
 		&i.CreatedAt,
+		&i.Rich,
 	)
 	return i, err
 }
 
 const listMessages = `-- name: ListMessages :many
-SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at FROM messages WHERE room_id = $1 AND seq > $2 ORDER BY seq LIMIT $3
+SELECT id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich FROM messages WHERE room_id = $1 AND seq > $2 ORDER BY seq LIMIT $3
 `
 
 type ListMessagesParams struct {
@@ -181,6 +184,7 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 			&i.Card,
 			&i.Trust,
 			&i.CreatedAt,
+			&i.Rich,
 		); err != nil {
 			return nil, err
 		}
@@ -235,7 +239,7 @@ func (q *Queries) NextRoomSeq(ctx context.Context, id pgtype.UUID) (int64, error
 }
 
 const updateMessageBody = `-- name: UpdateMessageBody :one
-UPDATE messages SET body = $2 WHERE id = $1 RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at
+UPDATE messages SET body = $2 WHERE id = $1 RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich
 `
 
 type UpdateMessageBodyParams struct {
@@ -258,12 +262,13 @@ func (q *Queries) UpdateMessageBody(ctx context.Context, arg UpdateMessageBodyPa
 		&i.Card,
 		&i.Trust,
 		&i.CreatedAt,
+		&i.Rich,
 	)
 	return i, err
 }
 
 const updateMessageCard = `-- name: UpdateMessageCard :one
-UPDATE messages SET card = $2 WHERE id = $1 RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at
+UPDATE messages SET card = $2 WHERE id = $1 RETURNING id, room_id, seq, sender_type, sender_id, client_msg_id, body, mentions, card, trust, created_at, rich
 `
 
 type UpdateMessageCardParams struct {
@@ -286,6 +291,7 @@ func (q *Queries) UpdateMessageCard(ctx context.Context, arg UpdateMessageCardPa
 		&i.Card,
 		&i.Trust,
 		&i.CreatedAt,
+		&i.Rich,
 	)
 	return i, err
 }

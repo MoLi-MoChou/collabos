@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -35,8 +36,11 @@ func contains(xs []string, x string) bool {
 
 func (s *Service) permissionEscalated(ctx context.Context, t db.Task, p protocol.PermissionRequest) {
 	code := delegation.CodeScopeExceeded
-	if p.Layer == "action" {
+	switch p.Layer {
+	case "action":
 		code = delegation.CodeActionForbidden
+	case "autonomy":
+		code = "autonomy_supervised"
 	}
 	rels := make([]string, 0, len(p.Paths))
 	for _, x := range p.Paths {
@@ -53,16 +57,23 @@ func (s *Service) permissionEscalated(ctx context.Context, t db.Task, p protocol
 	if pr.Status != "pending" {
 		return
 	}
-	if _, err := s.setStatus(ctx, t, protocol.StatusApproval, code); err != nil {
-		s.log.Warn("permission status", "err", err)
+	layer := nonEmpty(p.Layer, "scope")
+	_ = s.Q.SetPermissionMeta(ctx, db.SetPermissionMetaParams{ID: pr.ID, Layer: layer, TimeoutAt: s.deadline()})
+	if t.ReasonCode != delegation.CodeBudgetExceeded {
+		if _, err := s.setStatus(ctx, t, protocol.StatusApproval, code); err != nil {
+			s.log.Warn("permission status", "err", err)
+		}
 	}
 	s.appendEvent(ctx, t.ID, "permission_requested", map[string]any{"permission_id": util.UUIDString(pr.ID), "kind": p.Kind, "paths": rels, "command": p.Command, "reason_code": code})
 	s.Audit(ctx, t.WorkspaceID, "agent", util.UUIDString(t.TargetAgentID), "permission.escalate", "task", util.UUIDString(t.ID), map[string]any{"paths": rels, "kind": p.Kind, "code": code})
 	_, _ = s.systemCard(ctx, t.RoomID, "需要审批：agent 请求超出授权范围的操作", Card{
 		"type": "permission", "state": "pending", "task_id": util.UUIDString(t.ID), "permission_id": util.UUIDString(pr.ID),
 		"kind": p.Kind, "title": p.Title, "paths": rels, "command": p.Command, "reason_code": code,
-		"eligible": eligibleForPermission(t),
+		"eligible": eligibleForPermission(t), "layer": layer, "rule": "ANY_ONE",
+		// FR-CLI-301: who the request comes from and how far to trust it.
+		"source_agent_id": util.UUIDString(t.TargetAgentID), "trust": "untrusted", "trace_id": t.TraceID,
 	})
+	s.notify(ctx, t.WorkspaceID, t.RoomID, "需要审批：agent 请求 "+p.Title)
 }
 
 // PermissionDecisionInput is a human decision on a permission card.
@@ -93,6 +104,9 @@ func (s *Service) DecidePermission(ctx context.Context, wsID, userID, permID str
 	if in.Decision != "allow" && in.Decision != "deny" {
 		return TaskDTO{}, apperr.BadRequest("decision must be allow or deny")
 	}
+	if in.Decision == "deny" && strings.TrimSpace(in.Comment) == "" {
+		return TaskDTO{}, apperr.ErrReasonRequired
+	}
 	status := "approved"
 	if in.Decision == "deny" {
 		status = "denied"
@@ -113,8 +127,12 @@ func (s *Service) DecidePermission(ctx context.Context, wsID, userID, permID str
 	s.appendEvent(ctx, t.ID, "permission_decided", map[string]any{"permission_id": permID, "decision": in.Decision, "by": userID})
 	s.Audit(ctx, t.WorkspaceID, "user", userID, "permission."+status, "task", util.UUIDString(t.ID), map[string]any{"permission_id": permID, "paths": paths, "comment": in.Comment})
 	s.patchPermissionCard(ctx, t, permID, status, userID)
+	if t.ReasonCode == ReasonDecisionTimout {
+		// The run was suspended at the timeout; let it continue with the decision.
+		s.Daemons.Send(util.UUIDString(t.DaemonID), s.frame(t, protocol.TypeTaskResume, protocol.TaskPause{TaskID: util.UUIDString(t.ID)}))
+	}
 	pending, _ := s.Q.ListPendingPermissions(ctx, t.ID)
-	if len(pending) == 0 && t.Status == string(protocol.StatusApproval) {
+	if len(pending) == 0 && t.Status == string(protocol.StatusApproval) && t.ReasonCode != delegation.CodeBudgetExceeded {
 		to := protocol.StatusWorking
 		if !s.Daemons.Online(util.UUIDString(t.DaemonID)) {
 			to = protocol.StatusRunningOffline

@@ -85,6 +85,14 @@ export const TypeMergeExecute = "MERGE_EXECUTE";
  */
 export const TypeMergeResult = "MERGE_RESULT";
 /**
+ * Event types (PRD 9.1).
+ */
+export const TypeTaskPause = "TASK_PAUSE";
+/**
+ * Event types (PRD 9.1).
+ */
+export const TypeTaskResume = "TASK_RESUME";
+/**
  * Server -> UI.
  */
 export const TypeTaskEvent = "TASK_EVENT";
@@ -214,12 +222,20 @@ export const KindCode = "code";
  */
 export const KindChat = "chat";
 /**
+ * KindPatrol is a read-only proactive run whose findings an agent posts (scenario D).
+ */
+export const KindPatrol = "patrol";
+/**
  * ContextItem is one trust-labelled piece of context (PRD 11.4).
  */
 export interface ContextItem {
   type: string;
   trust: string;
   text: string;
+  /**
+   * Source names where the item came from (e.g. "MEMORY.md v3 confirmed by 张三").
+   */
+  source?: string;
 }
 /**
  * DelegationDispatch asks a daemon to run a task.
@@ -238,6 +254,52 @@ export interface DelegationDispatch {
   budget: Budget;
   context: ContextItem[];
   cross_owner: boolean;
+  /**
+   * TraceID follows the delegation chain end to end (FR-SRV-602).
+   */
+  trace_id?: string;
+  parent_task_id?: string;
+  depth?: number /* int */;
+  max_depth?: number /* int */;
+  /**
+   * Autonomy is supervised|standard|autonomous (PRD 3.2, 6.3).
+   */
+  autonomy?: string;
+  /**
+   * Acceptance criteria the agent must address (PRD 6.1).
+   */
+  acceptance?: string[];
+  /**
+   * TestCommand, when set by the project lead, runs in the sandbox after the agent.
+   */
+  test_command?: string;
+  /**
+   * Roster lists specialists the agent may sub-delegate to (multi-level delegation).
+   */
+  roster?: string[];
+}
+/**
+ * TaskPause suspends a running task (budget or decision timeout); TaskResume continues it.
+ */
+export interface TaskPause {
+  task_id: string;
+  reason?: string;
+}
+/**
+ * TestResult is the outcome of the project's test command (PRD 9.1 tests).
+ */
+export interface TestResult {
+  command: string;
+  passed: boolean;
+  output: string;
+}
+/**
+ * RichUI is an OpenUI Lang rich message carried in ACP _meta.collabos.ui (PRD 7.1.5).
+ */
+export interface RichUI {
+  lang: string;
+  version: string;
+  source: string;
 }
 /**
  * TaskCancel asks a daemon to stop a task.
@@ -301,6 +363,10 @@ export interface DaemonTaskCompleted {
   usage?: Usage;
   acp_version?: number /* int */;
   duration_ms: number /* int64 */;
+  trace_id?: string;
+  tests?: TestResult;
+  ui?: RichUI;
+  diff?: string;
 }
 /**
  * PermissionRequest forwards an agent's session/request_permission.

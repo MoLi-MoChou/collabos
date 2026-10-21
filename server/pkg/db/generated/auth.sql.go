@@ -79,7 +79,7 @@ func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (User, err
 
 const getUserByToken = `-- name: GetUserByToken :one
 SELECT u.id, u.email, u.name, u.handle, u.created_at FROM auth_tokens t JOIN users u ON u.id = t.user_id
-WHERE t.token_hash = $1 AND t.expires_at > now()
+WHERE t.token_hash = $1 AND t.expires_at > now() AND t.revoked_at IS NULL AND t.kind IN ('access', 'api')
 `
 
 func (q *Queries) GetUserByToken(ctx context.Context, tokenHash string) (User, error) {

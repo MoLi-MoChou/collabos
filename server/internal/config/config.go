@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,14 @@ type Server struct {
 	HeartbeatInterval    time.Duration
 	OfflineGrace         time.Duration
 	DefaultModel         string
+	// DecisionTimeout is how long intake, permission and merge decisions may
+	// wait before the task is paused (never auto-approved) (PRD 3.2).
+	DecisionTimeout time.Duration
+	SweepInterval   time.Duration
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+	// IMAllowHosts limits outbound IM webhooks (Slack/Feishu/DingTalk) to known hosts.
+	IMAllowHosts []string
 }
 
 func env(k, def string) string {
@@ -51,8 +60,43 @@ func LoadServer() (Server, error) {
 		OfflineGrace:         grace,
 		DefaultModel:         env("COLLAB_DEFAULT_MODEL", "opencode/deepseek-v4.1-flash-free"),
 	}
+	c.DecisionTimeout = dur("COLLAB_DECISION_TIMEOUT", 24*time.Hour)
+	c.SweepInterval = dur("COLLAB_SWEEP_INTERVAL", 30*time.Second)
+	c.AccessTokenTTL = dur("COLLAB_ACCESS_TOKEN_TTL", 12*time.Hour)
+	c.RefreshTokenTTL = dur("COLLAB_REFRESH_TOKEN_TTL", 30*24*time.Hour)
+	c.IMAllowHosts = []string{"hooks.slack.com", "open.feishu.cn", "open.larksuite.com", "oapi.dingtalk.com"}
+	for _, h := range strings.Split(os.Getenv("COLLAB_IM_ALLOW_HOSTS"), ",") {
+		if h = strings.TrimSpace(h); h != "" {
+			c.IMAllowHosts = append(c.IMAllowHosts, h)
+		}
+	}
 	if c.DatabaseURL == "" {
 		return Server{}, fmt.Errorf("config: DATABASE_URL is required")
 	}
 	return c, nil
+}
+
+func dur(k string, def time.Duration) time.Duration {
+	if v := os.Getenv(k); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			return d
+		}
+	}
+	return def
+}
+
+// Defaults fills zero durations (tests build Server literals).
+func (c *Server) Defaults() {
+	if c.DecisionTimeout == 0 {
+		c.DecisionTimeout = 24 * time.Hour
+	}
+	if c.SweepInterval == 0 {
+		c.SweepInterval = 30 * time.Second
+	}
+	if c.AccessTokenTTL == 0 {
+		c.AccessTokenTTL = 12 * time.Hour
+	}
+	if c.RefreshTokenTTL == 0 {
+		c.RefreshTokenTTL = 30 * 24 * time.Hour
+	}
 }

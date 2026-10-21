@@ -56,3 +56,13 @@ func (h *Hub) Send(daemonID string, e protocol.Envelope) bool {
 	c.Send(e)
 	return true
 }
+
+// Kick closes the daemon's live connection (device token revoked).
+func (h *Hub) Kick(daemonID string) {
+	h.mu.RLock()
+	c := h.conns[daemonID]
+	h.mu.RUnlock()
+	if c != nil {
+		c.Close()
+	}
+}

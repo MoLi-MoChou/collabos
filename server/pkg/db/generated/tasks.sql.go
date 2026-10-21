@@ -12,7 +12,7 @@ import (
 )
 
 const addTaskUsage = `-- name: AddTaskUsage :one
-UPDATE tasks SET used_tokens = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+UPDATE tasks SET used_tokens = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type AddTaskUsageParams struct {
@@ -51,6 +51,13 @@ func (q *Queries) AddTaskUsage(ctx context.Context, arg AddTaskUsageParams) (Tas
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
@@ -86,7 +93,7 @@ INSERT INTO tasks (workspace_id, room_id, project_id, source_message_id, parent_
     created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status,
     grant_spec, budget, billing, approvers, depth, max_depth)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type CreateTaskParams struct {
@@ -166,12 +173,19 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
 
 const getTask = `-- name: GetTask :one
-SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at FROM tasks WHERE id = $1
+SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance FROM tasks WHERE id = $1
 `
 
 func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
@@ -205,12 +219,19 @@ func (q *Queries) GetTask(ctx context.Context, id pgtype.UUID) (Task, error) {
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
 
 const getTaskByIdempotency = `-- name: GetTaskByIdempotency :one
-SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at FROM tasks WHERE workspace_id = $1 AND idempotency_key = $2
+SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance FROM tasks WHERE workspace_id = $1 AND idempotency_key = $2
 `
 
 type GetTaskByIdempotencyParams struct {
@@ -249,6 +270,13 @@ func (q *Queries) GetTaskByIdempotency(ctx context.Context, arg GetTaskByIdempot
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
@@ -290,7 +318,7 @@ func (q *Queries) ListTaskEvents(ctx context.Context, arg ListTaskEventsParams) 
 }
 
 const listTasks = `-- name: ListTasks :many
-SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at FROM tasks WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT 200
+SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance FROM tasks WHERE workspace_id = $1 ORDER BY created_at DESC LIMIT 200
 `
 
 func (q *Queries) ListTasks(ctx context.Context, workspaceID pgtype.UUID) ([]Task, error) {
@@ -330,6 +358,13 @@ func (q *Queries) ListTasks(ctx context.Context, workspaceID pgtype.UUID) ([]Tas
 			&i.Result,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TraceID,
+			&i.DependsOn,
+			&i.Tainted,
+			&i.DecisionDeadline,
+			&i.ApprovalRule,
+			&i.Autonomy,
+			&i.Acceptance,
 		); err != nil {
 			return nil, err
 		}
@@ -342,7 +377,7 @@ func (q *Queries) ListTasks(ctx context.Context, workspaceID pgtype.UUID) ([]Tas
 }
 
 const listTasksForDaemonByStatus = `-- name: ListTasksForDaemonByStatus :many
-SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at FROM tasks WHERE daemon_id = $1 AND status = ANY($2::text[]) ORDER BY created_at
+SELECT id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance FROM tasks WHERE daemon_id = $1 AND status = ANY($2::text[]) ORDER BY created_at
 `
 
 type ListTasksForDaemonByStatusParams struct {
@@ -387,6 +422,13 @@ func (q *Queries) ListTasksForDaemonByStatus(ctx context.Context, arg ListTasksF
 			&i.Result,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.TraceID,
+			&i.DependsOn,
+			&i.Tainted,
+			&i.DecisionDeadline,
+			&i.ApprovalRule,
+			&i.Autonomy,
+			&i.Acceptance,
 		); err != nil {
 			return nil, err
 		}
@@ -399,7 +441,7 @@ func (q *Queries) ListTasksForDaemonByStatus(ctx context.Context, arg ListTasksF
 }
 
 const setTaskResult = `-- name: SetTaskResult :one
-UPDATE tasks SET status = $2, result = $3, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+UPDATE tasks SET status = $2, result = $3, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type SetTaskResultParams struct {
@@ -439,12 +481,19 @@ func (q *Queries) SetTaskResult(ctx context.Context, arg SetTaskResultParams) (T
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
 
 const updateTaskBilling = `-- name: UpdateTaskBilling :one
-UPDATE tasks SET billing = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+UPDATE tasks SET billing = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type UpdateTaskBillingParams struct {
@@ -483,12 +532,19 @@ func (q *Queries) UpdateTaskBilling(ctx context.Context, arg UpdateTaskBillingPa
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
 
 const updateTaskGrant = `-- name: UpdateTaskGrant :one
-UPDATE tasks SET grant_spec = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+UPDATE tasks SET grant_spec = $2, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type UpdateTaskGrantParams struct {
@@ -527,12 +583,19 @@ func (q *Queries) UpdateTaskGrant(ctx context.Context, arg UpdateTaskGrantParams
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }
 
 const updateTaskStatus = `-- name: UpdateTaskStatus :one
-UPDATE tasks SET status = $2, reason_code = $3, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at
+UPDATE tasks SET status = $2, reason_code = $3, updated_at = now() WHERE id = $1 RETURNING id, workspace_id, room_id, project_id, source_message_id, parent_task_id, idempotency_key, created_by, source_agent_id, target_agent_id, target_owner_id, daemon_id, kind, title, prompt, status, grant_spec, budget, billing, approvers, depth, max_depth, reason_code, used_tokens, result, created_at, updated_at, trace_id, depends_on, tainted, decision_deadline, approval_rule, autonomy, acceptance
 `
 
 type UpdateTaskStatusParams struct {
@@ -572,6 +635,13 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.Result,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.TraceID,
+		&i.DependsOn,
+		&i.Tainted,
+		&i.DecisionDeadline,
+		&i.ApprovalRule,
+		&i.Autonomy,
+		&i.Acceptance,
 	)
 	return i, err
 }

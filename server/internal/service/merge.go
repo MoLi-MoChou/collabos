@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -44,14 +47,28 @@ func (s *Service) openPullRequest(ctx context.Context, t db.Task, c protocol.Dae
 		s.log.Error("create approval", "err", err)
 		return
 	}
+	category, rule := ApprovalCategory(c.DiffStat), t.ApprovalRule
+	if category == CategoryDBMigration && len(ids) > 1 {
+		rule = "ALL" // schema migrations need every named approver
+	}
+	if rule == "" {
+		rule = "ANY_ONE"
+	}
+	if up, err := s.Q.SetApprovalMeta(ctx, db.SetApprovalMetaParams{ID: ap.ID, Category: category, Rule: rule, TimeoutAt: s.deadline()}); err == nil {
+		ap = up
+	}
+	_ = s.Q.SetTaskDeadline(ctx, db.SetTaskDeadlineParams{ID: t.ID, DecisionDeadline: s.deadline()})
 	s.appendEvent(ctx, t.ID, "pr_opened", prDTO(pr))
 	s.Audit(ctx, t.WorkspaceID, "daemon", util.UUIDString(t.DaemonID), "pr.open", "pull_request", util.UUIDString(pr.ID), map[string]any{"branch": c.Branch, "commit": c.Commit})
 	_, _ = s.systemCard(ctx, t.RoomID, fmt.Sprintf("PR #%d 等待合并审批：%s", pr.Number, t.Title), Card{
 		"type": "merge", "state": "pending", "task_id": util.UUIDString(t.ID), "approval_id": util.UUIDString(ap.ID),
 		"pr_id": util.UUIDString(pr.ID), "number": pr.Number, "branch": pr.Branch, "base_branch": pr.BaseBranch,
 		"commit": pr.HeadCommit, "diff_stat": pr.DiffStat, "url": pr.Url, "eligible": ids, "approvers": approvers,
-		"summary": c.Summary,
+		"summary": c.Summary, "rule": rule, "category": category, "decisions": []any{}, "trace_id": t.TraceID,
+		// FR-CLI-301: the summary is the agent's own words, i.e. untrusted content.
+		"summary_trust": "untrusted", "source_agent_id": util.UUIDString(t.TargetAgentID), "tests": c.Tests,
 	})
+	s.notify(ctx, t.WorkspaceID, t.RoomID, fmt.Sprintf("PR #%d 等待合并审批（%s）：%s", pr.Number, rule, t.Title))
 	s.dock(t.WorkspaceID, "tasks")
 }
 
@@ -89,6 +106,9 @@ func (s *Service) DecideMerge(ctx context.Context, wsID, userID, approvalID stri
 	msg, hasCard := s.findCard(ctx, t.RoomID, "merge", "approval_id", approvalID)
 	switch in.Decision {
 	case "reject":
+		if strings.TrimSpace(in.Comment) == "" {
+			return TaskDTO{}, apperr.ErrReasonRequired
+		}
 		if _, err := s.Q.DecideApproval(ctx, db.DecideApprovalParams{ID: id, Status: "rejected", DecidedBy: util.MustUUID(userID), Comment: in.Comment}); err != nil {
 			return TaskDTO{}, apperr.ErrAlreadyDone
 		}
@@ -107,6 +127,35 @@ func (s *Service) DecideMerge(ctx context.Context, wsID, userID, approvalID stri
 	p, err := s.Q.GetProject(ctx, t.ProjectID)
 	if err != nil {
 		return TaskDTO{}, err
+	}
+	if ap.Status != "pending" {
+		return TaskDTO{}, apperr.ErrAlreadyDone
+	}
+	if ap.Rule == "ALL" {
+		var decs []map[string]any
+		_ = json.Unmarshal(ap.Decisions, &decs)
+		got := map[string]bool{}
+		for _, d := range decs {
+			got[str(d["by"])] = true
+		}
+		if got[userID] {
+			return TaskDTO{}, apperr.ErrAlreadyDone
+		}
+		got[userID] = true
+		if len(got) < len(eligible) {
+			entry := map[string]any{"by": userID, "decision": "approve", "comment": in.Comment, "at": time.Now().UTC().Format(time.RFC3339)}
+			up, err := s.Q.AddApprovalDecision(ctx, db.AddApprovalDecisionParams{ID: id, Column2: util.JSON([]any{entry})})
+			if err != nil {
+				return TaskDTO{}, apperr.ErrAlreadyDone
+			}
+			s.Audit(ctx, t.WorkspaceID, "user", userID, "merge.approve_partial", "pull_request", util.UUIDString(pr.ID), map[string]any{"approved_commit": ap.ApprovedCommit, "have": len(got), "need": len(eligible)})
+			if hasCard {
+				var all []any
+				_ = json.Unmarshal(up.Decisions, &all)
+				_, _, _ = s.patchCard(ctx, msg.ID, Card{"decisions": all})
+			}
+			return TaskDTOOf(t), nil
+		}
 	}
 	executor, ok := s.approverDaemon(ctx, t.WorkspaceID, userID, p.RemoteUrl)
 	if !ok {
@@ -216,4 +265,20 @@ func prURLFor(pr db.PullRequest) string {
 		return pr.Url
 	}
 	return ""
+}
+
+// Approval categories (PRD 6.3 high-risk operations).
+const (
+	CategoryMergeProtected = "merge_protected"
+	CategoryDBMigration    = "db_migration"
+)
+
+var migrationPathRe = regexp.MustCompile(`(?m)^\s*\S*(migrations?/|migrate/|\.sql\s)`)
+
+// ApprovalCategory classifies a merge by the files it touches.
+func ApprovalCategory(diffStat string) string {
+	if migrationPathRe.MatchString(diffStat) {
+		return CategoryDBMigration
+	}
+	return CategoryMergeProtected
 }

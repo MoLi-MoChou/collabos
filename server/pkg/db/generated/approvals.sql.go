@@ -13,7 +13,7 @@ import (
 
 const createApproval = `-- name: CreateApproval :one
 INSERT INTO approvals (task_id, pr_id, action, rule, eligible, approved_commit)
-VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at
+VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at, category, decisions, timeout_at
 `
 
 type CreateApprovalParams struct {
@@ -49,6 +49,9 @@ func (q *Queries) CreateApproval(ctx context.Context, arg CreateApprovalParams) 
 		&i.ExecutorDaemonID,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Category,
+		&i.Decisions,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
@@ -57,7 +60,7 @@ const createPermissionRequest = `-- name: CreatePermissionRequest :one
 INSERT INTO permission_requests (task_id, request_id, kind, title, paths, command, reason_code, status)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 ON CONFLICT (task_id, request_id) DO UPDATE SET kind = EXCLUDED.kind
-RETURNING id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at
+RETURNING id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at, layer, timeout_at
 `
 
 type CreatePermissionRequestParams struct {
@@ -97,6 +100,8 @@ func (q *Queries) CreatePermissionRequest(ctx context.Context, arg CreatePermiss
 		&i.Comment,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Layer,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
@@ -155,7 +160,7 @@ func (q *Queries) CreatePullRequest(ctx context.Context, arg CreatePullRequestPa
 
 const decideApproval = `-- name: DecideApproval :one
 UPDATE approvals SET status = $2, decided_by = $3, comment = $4, executor_daemon_id = $5, decided_at = now()
-WHERE id = $1 AND status = 'pending' RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at
+WHERE id = $1 AND status = 'pending' RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at, category, decisions, timeout_at
 `
 
 type DecideApprovalParams struct {
@@ -189,13 +194,16 @@ func (q *Queries) DecideApproval(ctx context.Context, arg DecideApprovalParams) 
 		&i.ExecutorDaemonID,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Category,
+		&i.Decisions,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
 
 const decidePermissionRequest = `-- name: DecidePermissionRequest :one
 UPDATE permission_requests SET status = $2, decided_by = $3, comment = $4, decided_at = now()
-WHERE id = $1 AND status = 'pending' RETURNING id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at
+WHERE id = $1 AND status = 'pending' RETURNING id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at, layer, timeout_at
 `
 
 type DecidePermissionRequestParams struct {
@@ -227,12 +235,14 @@ func (q *Queries) DecidePermissionRequest(ctx context.Context, arg DecidePermiss
 		&i.Comment,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Layer,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
 
 const getApproval = `-- name: GetApproval :one
-SELECT id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at FROM approvals WHERE id = $1
+SELECT id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at, category, decisions, timeout_at FROM approvals WHERE id = $1
 `
 
 func (q *Queries) GetApproval(ctx context.Context, id pgtype.UUID) (Approval, error) {
@@ -252,12 +262,15 @@ func (q *Queries) GetApproval(ctx context.Context, id pgtype.UUID) (Approval, er
 		&i.ExecutorDaemonID,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Category,
+		&i.Decisions,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
 
 const getApprovalByTask = `-- name: GetApprovalByTask :one
-SELECT id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at FROM approvals WHERE task_id = $1 ORDER BY created_at DESC LIMIT 1
+SELECT id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at, category, decisions, timeout_at FROM approvals WHERE task_id = $1 ORDER BY created_at DESC LIMIT 1
 `
 
 func (q *Queries) GetApprovalByTask(ctx context.Context, taskID pgtype.UUID) (Approval, error) {
@@ -277,12 +290,15 @@ func (q *Queries) GetApprovalByTask(ctx context.Context, taskID pgtype.UUID) (Ap
 		&i.ExecutorDaemonID,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Category,
+		&i.Decisions,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
 
 const getPermissionRequest = `-- name: GetPermissionRequest :one
-SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at FROM permission_requests WHERE id = $1
+SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at, layer, timeout_at FROM permission_requests WHERE id = $1
 `
 
 func (q *Queries) GetPermissionRequest(ctx context.Context, id pgtype.UUID) (PermissionRequest, error) {
@@ -302,6 +318,8 @@ func (q *Queries) GetPermissionRequest(ctx context.Context, id pgtype.UUID) (Per
 		&i.Comment,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Layer,
+		&i.TimeoutAt,
 	)
 	return i, err
 }
@@ -361,7 +379,7 @@ func (q *Queries) GetPullRequestByTask(ctx context.Context, taskID pgtype.UUID) 
 }
 
 const listDecidedPermissions = `-- name: ListDecidedPermissions :many
-SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at FROM permission_requests WHERE task_id = $1 AND status <> 'pending' ORDER BY decided_at
+SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at, layer, timeout_at FROM permission_requests WHERE task_id = $1 AND status <> 'pending' ORDER BY decided_at
 `
 
 func (q *Queries) ListDecidedPermissions(ctx context.Context, taskID pgtype.UUID) ([]PermissionRequest, error) {
@@ -387,6 +405,8 @@ func (q *Queries) ListDecidedPermissions(ctx context.Context, taskID pgtype.UUID
 			&i.Comment,
 			&i.CreatedAt,
 			&i.DecidedAt,
+			&i.Layer,
+			&i.TimeoutAt,
 		); err != nil {
 			return nil, err
 		}
@@ -399,7 +419,7 @@ func (q *Queries) ListDecidedPermissions(ctx context.Context, taskID pgtype.UUID
 }
 
 const listPendingApprovalsForWorkspace = `-- name: ListPendingApprovalsForWorkspace :many
-SELECT a.id, a.task_id, a.pr_id, a.action, a.rule, a.eligible, a.status, a.approved_commit, a.decided_by, a.comment, a.executor_daemon_id, a.created_at, a.decided_at FROM approvals a JOIN tasks t ON t.id = a.task_id
+SELECT a.id, a.task_id, a.pr_id, a.action, a.rule, a.eligible, a.status, a.approved_commit, a.decided_by, a.comment, a.executor_daemon_id, a.created_at, a.decided_at, a.category, a.decisions, a.timeout_at FROM approvals a JOIN tasks t ON t.id = a.task_id
 WHERE t.workspace_id = $1 AND a.status = 'pending'
 `
 
@@ -426,6 +446,9 @@ func (q *Queries) ListPendingApprovalsForWorkspace(ctx context.Context, workspac
 			&i.ExecutorDaemonID,
 			&i.CreatedAt,
 			&i.DecidedAt,
+			&i.Category,
+			&i.Decisions,
+			&i.TimeoutAt,
 		); err != nil {
 			return nil, err
 		}
@@ -438,7 +461,7 @@ func (q *Queries) ListPendingApprovalsForWorkspace(ctx context.Context, workspac
 }
 
 const listPendingPermissions = `-- name: ListPendingPermissions :many
-SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at FROM permission_requests WHERE task_id = $1 AND status = 'pending'
+SELECT id, task_id, request_id, kind, title, paths, command, reason_code, status, decided_by, comment, created_at, decided_at, layer, timeout_at FROM permission_requests WHERE task_id = $1 AND status = 'pending'
 `
 
 func (q *Queries) ListPendingPermissions(ctx context.Context, taskID pgtype.UUID) ([]PermissionRequest, error) {
@@ -464,6 +487,8 @@ func (q *Queries) ListPendingPermissions(ctx context.Context, taskID pgtype.UUID
 			&i.Comment,
 			&i.CreatedAt,
 			&i.DecidedAt,
+			&i.Layer,
+			&i.TimeoutAt,
 		); err != nil {
 			return nil, err
 		}
@@ -516,7 +541,7 @@ func (q *Queries) ListPullRequests(ctx context.Context, workspaceID pgtype.UUID)
 }
 
 const setApprovalStatus = `-- name: SetApprovalStatus :one
-UPDATE approvals SET status = $2 WHERE id = $1 RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at
+UPDATE approvals SET status = $2 WHERE id = $1 RETURNING id, task_id, pr_id, action, rule, eligible, status, approved_commit, decided_by, comment, executor_daemon_id, created_at, decided_at, category, decisions, timeout_at
 `
 
 type SetApprovalStatusParams struct {
@@ -541,6 +566,9 @@ func (q *Queries) SetApprovalStatus(ctx context.Context, arg SetApprovalStatusPa
 		&i.ExecutorDaemonID,
 		&i.CreatedAt,
 		&i.DecidedAt,
+		&i.Category,
+		&i.Decisions,
+		&i.TimeoutAt,
 	)
 	return i, err
 }

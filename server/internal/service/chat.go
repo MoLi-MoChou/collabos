@@ -204,6 +204,9 @@ func (s *Service) SendMessage(ctx context.Context, wsID, userID, roomID string, 
 	if err != nil {
 		return MessageDTO{}, err
 	}
+	if err := s.requireProject(ctx, r, userID, true); err != nil {
+		return MessageDTO{}, err
+	}
 	in.Body = strings.TrimSpace(in.Body)
 	if in.Body == "" {
 		return MessageDTO{}, apperr.BadRequest("body is required")
@@ -341,7 +344,7 @@ func (s *Service) ConfirmDraft(ctx context.Context, wsID, userID, messageID stri
 		RoomID: util.UUIDString(r.ID), ProjectID: util.UUIDString(r.ProjectID), SourceMessageID: str(c["source_message_id"]),
 		TargetAgentID: str(c["target_agent_id"]), IdempotencyKey: "draft:" + messageID, SourceAgentID: str(c["source_agent_id"]),
 		Title: d.Title, Prompt: d.Prompt, Grant: d.Grant, Budget: d.Budget, Approvers: d.Approvers, MaxDepth: d.MaxDepth,
-		ParentTaskID: str(c["parent_task_id"]),
+		ParentTaskID: str(c["parent_task_id"]), TraceID: str(c["trace_id"]),
 	}
 	t, dup, err := s.CreateDelegation(ctx, wsID, userID, in)
 	if err != nil {
