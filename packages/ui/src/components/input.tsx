@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "../cn";
 
 const field =
-  "w-full rounded-control border border-border bg-surface px-3 text-body text-fg placeholder:text-fg-subtle focus:outline-none focus:border-accent";
+  "w-full rounded-card border-0 bg-surface px-3 text-body text-fg shadow-card placeholder:text-fg-subtle focus:outline-none focus:shadow-ring";
 
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(function Input(
   { className, ...props },

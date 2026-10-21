@@ -1,30 +1,39 @@
-/* Grok Bot-like neutral placeholder theme (ADR-006). The only place where raw
-   color values may appear. Every theme must define the same set of tokens. */
+/* DS Bot-inspired theme (visual language from Fei2411/DeepSeek-Bot, Apache-2.0;
+   values re-derived, no source copied). The only place raw colors may appear.
+   Every theme must define the same set of tokens. */
 [data-theme="light"] {
   color-scheme: light;
-  --cos-color-bg: #f7f7f8;
+  --cos-color-bg: #fcfcfc;
   --cos-color-surface: #ffffff;
-  --cos-color-surface-2: #f2f2f4;
-  --cos-color-rail: #fbfbfc;
-  --cos-color-border: #e6e6ea;
-  --cos-color-border-strong: #d4d4da;
-  --cos-color-fg: #16161a;
-  --cos-color-fg-muted: #5f6068;
-  --cos-color-fg-subtle: #9a9ba3;
-  --cos-color-accent: #4f5bd5;
+  --cos-color-surface-2: #f2f2f2;
+  --cos-color-rail: #f7f7f7;
+  --cos-color-border: rgba(20, 20, 20, 0.08);
+  --cos-color-border-strong: rgba(20, 20, 20, 0.15);
+  --cos-color-fg: #141414;
+  --cos-color-fg-muted: rgba(20, 20, 20, 0.6);
+  --cos-color-fg-subtle: rgba(20, 20, 20, 0.36);
+  --cos-color-accent: #4d6bfe;
   --cos-color-accent-fg: #ffffff;
-  --cos-color-accent-soft: #eef0fd;
-  --cos-color-success: #1f9d63;
-  --cos-color-success-soft: #e8f6ef;
-  --cos-color-warn: #b7791f;
-  --cos-color-warn-soft: #fdf6e7;
-  --cos-color-danger: #d14343;
-  --cos-color-danger-soft: #fcecec;
-  --cos-color-term-bg: #16171c;
-  --cos-color-term-fg: #e4e4ea;
-  --cos-color-term-muted: #8a8b96;
-  --cos-color-overlay: rgb(15 15 20 / 0.4);
-  --cos-color-focus: #4f5bd5;
-  --cos-shadow-card: 0 1px 2px rgb(16 16 24 / 0.04), 0 1px 1px rgb(16 16 24 / 0.03);
-  --cos-shadow-popover: 0 10px 30px rgb(16 16 24 / 0.12), 0 2px 6px rgb(16 16 24 / 0.06);
+  --cos-color-accent-soft: rgba(77, 107, 254, 0.1);
+  --cos-color-success: #00a85f;
+  --cos-color-success-soft: rgba(0, 201, 114, 0.12);
+  --cos-color-warn: #e08600;
+  --cos-color-warn-soft: rgba(255, 152, 0, 0.12);
+  --cos-color-danger: #e02135;
+  --cos-color-danger-soft: rgba(224, 33, 53, 0.09);
+  --cos-color-term-bg: #141414;
+  --cos-color-term-fg: #f2f2f2;
+  --cos-color-term-muted: rgba(242, 242, 242, 0.5);
+  --cos-color-overlay: rgba(0, 0, 0, 0.32);
+  --cos-color-focus: #4d6bfe;
+  --cos-color-bubble: #eeeeee;
+  --cos-color-bubble-fg: #141414;
+  --cos-color-bubble-me: #070707;
+  --cos-color-bubble-me-fg: #fcfcfc;
+  --cos-color-hover: rgba(119, 119, 119, 0.09);
+  --cos-color-active: rgba(119, 119, 119, 0.17);
+  --cos-color-tag: rgba(20, 20, 20, 0.06);
+  --cos-color-tag-fg: rgba(20, 20, 20, 0.56);
+  --cos-shadow-card: inset 0 0 0 1px rgba(20, 20, 20, 0.08);
+  --cos-shadow-popover: 0 8px 28px rgba(0, 0, 0, 0.1), inset 0 0 0 1px rgba(20, 20, 20, 0.08);
 }

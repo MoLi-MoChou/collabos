@@ -12,7 +12,7 @@ export function DialogContent({ className, children, ...props }: React.Component
       <D.Overlay className="fixed inset-0 z-40 bg-overlay" />
       <D.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-panel border border-border bg-surface p-5 shadow-popover",
+          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-panel bg-surface p-5 shadow-popover",
           className,
         )}
         {...props}

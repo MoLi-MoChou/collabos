@@ -18,14 +18,14 @@ export function TasksTab() {
   return (
     <div className="flex flex-col gap-4 p-3">
       <section>
-        <div className="mb-2 px-1 text-caption font-medium text-fg-subtle">{t("dock.taskList")}</div>
+        <div className="mb-2 px-1 text-tiny font-medium text-fg-subtle">{t("dock.taskList")}</div>
         {!list.length && <div className="px-1 text-body text-fg-subtle">{t("dock.noTasks")}</div>}
         <div className="flex flex-col gap-1.5">
           {list.map((task) => (
             <button
               key={task.id}
               onClick={() => ui.actions.selectTask(task.id)}
-              className="flex cursor-pointer flex-col gap-1 rounded-card border border-border bg-surface px-3 py-2 text-left hover:bg-surface-2"
+              className="flex cursor-pointer flex-col gap-1 rounded-card bg-surface shadow-card px-3 py-2 text-left hover:bg-hover"
               data-task-id={task.id}
               data-testid="dock-task"
             >
@@ -39,10 +39,10 @@ export function TasksTab() {
         </div>
       </section>
       <section>
-        <div className="mb-2 px-1 text-caption font-medium text-fg-subtle">{t("dock.prs")}</div>
+        <div className="mb-2 px-1 text-tiny font-medium text-fg-subtle">{t("dock.prs")}</div>
         {!prs.data?.length && <div className="px-1 text-body text-fg-subtle">{t("dock.noPrs")}</div>}
         {(prs.data ?? []).map((pr) => (
-          <div key={pr.id} className="mb-1.5 flex items-center gap-2 rounded-card border border-border bg-surface px-3 py-2" data-testid="dock-pr">
+          <div key={pr.id} className="mb-1.5 flex items-center gap-2 rounded-card bg-surface shadow-card px-3 py-2" data-testid="dock-pr">
             <span className="text-body font-medium">#{pr.number}</span>
             <Badge tone={pr.status === "merged" ? "success" : pr.status === "open" ? "accent" : "neutral"}>{t(`pr.${pr.status}`)}</Badge>
             <Code className="truncate">{pr.head_commit.slice(0, 8)}</Code>

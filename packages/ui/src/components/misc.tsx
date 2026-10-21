@@ -14,5 +14,5 @@ export function Kbd({ className, ...props }: React.HTMLAttributes<HTMLElement>) 
 }
 
 export function Code({ className, ...props }: React.HTMLAttributes<HTMLElement>) {
-  return <code className={cn("rounded-sm bg-surface-2 px-1 font-mono text-mono text-fg", className)} {...props} />;
+  return <code className={cn("rounded-sm bg-tag px-1 font-mono text-mono text-fg", className)} {...props} />;
 }

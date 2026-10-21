@@ -70,7 +70,7 @@ function TaskLine({ taskId, fallback }: { taskId: string; fallback: string }) {
   const agent = task ? dir.agent(task.target_agent_id) : undefined;
   return (
     <button
-      className="flex w-full cursor-pointer items-center gap-2 rounded-card border border-border bg-surface px-3 py-2 text-left shadow-card hover:bg-surface-2"
+      className="flex w-full cursor-pointer items-center gap-2 rounded-card bg-surface px-3 py-2 text-left shadow-card transition-colors hover:bg-hover"
       onClick={() => ui.actions.selectTask(taskId)}
       data-testid="task-line"
       data-task-id={taskId}
@@ -158,8 +158,8 @@ function DraftView({ card, messageId }: { card: DraftCard; messageId: string }) 
                       aria-pressed={on}
                       onClick={() => setApprovers(on ? approvers.filter((x) => x !== m.id) : [...approvers, m.id])}
                       className={
-                        "cursor-pointer rounded-pill border px-2.5 py-0.5 text-caption " +
-                        (on ? "border-accent bg-accent-soft text-accent" : "border-border text-fg-muted hover:bg-surface-2")
+                        "cursor-pointer rounded-pill px-2.5 py-0.5 text-caption transition-colors " +
+                        (on ? "bg-fg text-bg" : "bg-tag text-fg-muted hover:bg-active")
                       }
                     >
                       {m.name}
@@ -205,7 +205,7 @@ function IntakeView({ card }: { card: IntakeCard }) {
   const owner = card.owner_id === me;
   return (
     <Card data-testid="intake-card" data-state={card.state} data-task-id={card.task_id}>
-      <CardHeader className={card.state === "pending" ? "bg-warn-soft rounded-t-card" : ""}>
+      <CardHeader>
         <Badge tone={card.state === "pending" ? "warn" : card.state === "accepted" ? "success" : "danger"}>{t(`card.intake.${card.state}`)}</Badge>
         <span className="text-body">{t("card.intake.from", { requester: dir.userName(card.requester_id), handle: card.agent_handle })}</span>
       </CardHeader>
@@ -246,15 +246,15 @@ function PermissionView({ card }: { card: PermissionCard }) {
   const decide = useDecidePermission();
   const eligible = card.eligible.includes(me);
   return (
-    <Card data-testid="permission-card" data-state={card.state} data-task-id={card.task_id} data-permission-id={card.permission_id} className={card.state === "pending" ? "border-warn" : ""}>
-      <CardHeader className={card.state === "pending" ? "bg-warn-soft rounded-t-card" : ""}>
+    <Card data-testid="permission-card" data-state={card.state} data-task-id={card.task_id} data-permission-id={card.permission_id} className={card.state === "pending" ? "shadow-ring-warn" : ""}>
+      <CardHeader>
         <Badge tone={card.state === "pending" ? "warn" : card.state === "approved" ? "success" : "danger"}>{t(`card.permission.${card.state}`)}</Badge>
         <span className="flex-1" />
         <span className="text-caption text-fg-muted">{t("card.permission.eligible", { names: card.eligible.map(dir.userName).join("、") })}</span>
       </CardHeader>
       <CardBody className="flex flex-col gap-2">
         <div className="text-title font-semibold">{t(`card.permission.title_${card.reason_code}`, { defaultValue: t("card.permission.title_scope_exceeded") })}</div>
-        <div className="rounded-control border border-border bg-surface-2 px-3 py-2 font-mono text-mono">
+        <div className="rounded-control bg-tag px-3 py-2 font-mono text-mono">
           {card.paths.map((p) => (
             <div key={p}>{p}</div>
           ))}
@@ -347,7 +347,7 @@ function MemoryView({ card }: { card: MemoryCard }) {
         <span className="text-body font-medium">{t("card.memory.title", { version: card.version })}</span>
       </CardHeader>
       <CardBody>
-        <pre className="whitespace-pre-wrap rounded-control bg-success-soft px-3 py-2 font-mono text-mono text-fg">{card.addition.trim()}</pre>
+        <pre className="whitespace-pre-wrap rounded-control bg-tag px-3 py-2 font-mono text-mono text-fg">{card.addition.trim()}</pre>
         <ErrorText error={decide.error} />
       </CardBody>
       {card.state === "pending" && (
@@ -374,7 +374,7 @@ function NoticeView({ card, body }: { card: NoticeCard; body: string }) {
   const danger = !["", "info"].includes(card.code);
   return (
     <div
-      className={"flex items-center gap-2 rounded-card border px-3 py-2 text-body " + (danger ? "border-danger bg-danger-soft text-danger" : "border-border bg-surface text-fg-muted")}
+      className={"mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-pill px-3 py-1 text-caption " + (danger ? "bg-danger-soft text-danger" : "text-fg-subtle")}
       data-testid="notice"
       data-code={card.code}
       data-task-id={card.task_id}

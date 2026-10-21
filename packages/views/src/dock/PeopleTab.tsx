@@ -14,7 +14,7 @@ export function PeopleTab() {
   return (
     <div className="flex flex-col gap-4 p-3">
       <section>
-        <div className="mb-2 px-1 text-caption font-medium text-fg-subtle">{t("dock.members")}</div>
+        <div className="mb-2 px-1 text-tiny font-medium text-fg-subtle">{t("dock.members")}</div>
         {dir.members.map((m) => (
           <div key={m.id} className="flex items-center gap-2 px-1 py-1.5" data-testid="member">
             <Avatar size="sm" name={m.name} />
@@ -25,7 +25,7 @@ export function PeopleTab() {
         ))}
       </section>
       <section>
-        <div className="mb-2 px-1 text-caption font-medium text-fg-subtle">{t("dock.agents")}</div>
+        <div className="mb-2 px-1 text-tiny font-medium text-fg-subtle">{t("dock.agents")}</div>
         <div className="flex flex-col gap-1.5">
           {dir.agents.map((a) => (
             <AgentRow key={a.id} a={a} mine={a.owner_id === me} />
@@ -38,7 +38,7 @@ export function PeopleTab() {
           <PairDialog />
         </div>
         {(daemons.data ?? []).map((d) => (
-          <div key={d.id} className="mb-1.5 rounded-card border border-border bg-surface px-3 py-2" data-testid="device" data-status={d.status}>
+          <div key={d.id} className="mb-1.5 rounded-card bg-surface shadow-card px-3 py-2" data-testid="device" data-status={d.status}>
             <div className="flex items-center gap-2">
               <Dot tone={d.status === "online" ? "success" : "neutral"} />
               <span className="text-body font-medium">{d.name}</span>
@@ -69,7 +69,7 @@ function AgentRow({ a, mine }: { a: Agent; mine: boolean }) {
   const [allow, setAllow] = useState<string[]>(a.intake_allowlist);
   const [edit, setEdit] = useState(false);
   return (
-    <div className="rounded-card border border-border bg-surface px-3 py-2" data-testid="agent" data-handle={a.handle}>
+    <div className="rounded-card bg-surface shadow-card px-3 py-2" data-testid="agent" data-handle={a.handle}>
       <div className="flex items-center gap-2">
         <Avatar size="sm" name={a.name} kind="agent" />
         <span className="text-body font-medium">@{a.handle}</span>
@@ -110,7 +110,7 @@ function AgentRow({ a, mine }: { a: Agent; mine: boolean }) {
                     <button
                       key={m.id}
                       onClick={() => setAllow(on ? allow.filter((x) => x !== m.id) : [...allow, m.id])}
-                      className={"cursor-pointer rounded-pill border px-2 py-0.5 text-caption " + (on ? "border-accent bg-accent-soft text-accent" : "border-border text-fg-muted")}
+                      className={"cursor-pointer rounded-pill px-2 py-0.5 text-caption " + (on ? "bg-fg text-bg" : "bg-tag text-fg-muted")}
                     >
                       {m.name}
                     </button>

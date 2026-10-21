@@ -25,7 +25,7 @@ export function MemoryTab({ roomId }: { roomId: string }) {
         {current && <Badge tone="success" data-testid="memory-version">{t("memory.version", { v: current.version })}</Badge>}
       </div>
       {pending.map((v) => (
-        <div key={v.id} className="rounded-card border border-warn bg-warn-soft p-3" data-testid="memory-pending">
+        <div key={v.id} className="rounded-card bg-surface shadow-ring-warn p-3" data-testid="memory-pending">
           <div className="mb-2 flex items-center gap-2">
             <Badge tone="warn">{t("memory.pending", { v: v.version })}</Badge>
             <span className="flex-1" />
@@ -43,7 +43,7 @@ export function MemoryTab({ roomId }: { roomId: string }) {
           <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap font-mono text-mono">{v.content}</pre>
         </div>
       ))}
-      <pre className="whitespace-pre-wrap rounded-card border border-border bg-surface p-3 font-mono text-mono" data-testid="memory-content">
+      <pre className="whitespace-pre-wrap rounded-card bg-surface shadow-card p-3 font-mono text-mono" data-testid="memory-content">
         {current?.content ?? ""}
       </pre>
       <div className="px-1 text-caption text-fg-subtle">{t("memory.history")}</div>

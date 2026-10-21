@@ -5,14 +5,14 @@ import { cn } from "../cn";
 export const Tabs = T.Root;
 
 export function TabsList({ className, ...props }: React.ComponentProps<typeof T.List>) {
-  return <T.List className={cn("flex gap-1 border-b border-border px-3", className)} {...props} />;
+  return <T.List className={cn("mx-auto my-3 inline-flex w-fit gap-0.5 rounded-pill bg-tag p-0.5", className)} {...props} />;
 }
 
 export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof T.Trigger>) {
   return (
     <T.Trigger
       className={cn(
-        "relative -mb-px cursor-pointer border-b-2 border-transparent px-2 py-2.5 text-body text-fg-muted hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg",
+        "cursor-pointer rounded-pill px-3 py-1 text-caption text-fg-muted transition-colors hover:text-fg data-[state=active]:bg-bg data-[state=active]:text-fg data-[state=active]:shadow-card",
         className,
       )}
       {...props}

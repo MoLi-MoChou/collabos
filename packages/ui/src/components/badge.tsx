@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "../cn";
 
 const tones = {
-  neutral: "bg-surface-2 text-fg-muted",
+  neutral: "bg-tag text-tag-fg",
   accent: "bg-accent-soft text-accent",
   success: "bg-success-soft text-success",
   warn: "bg-warn-soft text-warn",
@@ -14,7 +14,7 @@ export type Tone = keyof typeof tones;
 export function Badge({ tone = "neutral", className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { tone?: Tone }) {
   return (
     <span
-      className={cn("inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-caption font-medium whitespace-nowrap", tones[tone], className)}
+      className={cn("inline-flex items-center gap-1 rounded-sm px-1.5 py-px text-tiny font-medium whitespace-nowrap", tones[tone], className)}
       {...props}
     />
   );
