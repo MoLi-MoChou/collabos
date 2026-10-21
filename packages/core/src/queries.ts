@@ -103,15 +103,15 @@ export function useDiscardDraft() {
 }
 export function useDecideIntake() {
   const api = useApi();
-  return useAction((v: { taskId: string; decision: "accept" | "reject" }) => api.decideIntake(v.taskId, v.decision));
+  return useAction((v: { taskId: string; decision: "accept" | "reject"; comment?: string; modelKey?: "source" | "target" }) => api.decideIntake(v.taskId, v.decision, v.comment, v.modelKey));
 }
 export function useDecidePermission() {
   const api = useApi();
-  return useAction((v: { permissionId: string; decision: "allow" | "deny" }) => api.decidePermission(v.permissionId, v.decision));
+  return useAction((v: { permissionId: string; decision: "allow" | "deny"; comment?: string }) => api.decidePermission(v.permissionId, v.decision, v.comment));
 }
 export function useDecideMerge() {
   const api = useApi();
-  return useAction((v: { approvalId: string; decision: "approve" | "reject" }) => api.decideMerge(v.approvalId, v.decision));
+  return useAction((v: { approvalId: string; decision: "approve" | "reject"; comment?: string }) => api.decideMerge(v.approvalId, v.decision, v.comment));
 }
 export function useCancelTask() {
   const api = useApi();
@@ -122,7 +122,7 @@ export function useDecideMemory() {
   const ws = useWs();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (v: { memoryId: string; decision: "confirm" | "reject" }) => api.decideMemory(v.memoryId, v.decision),
+    mutationFn: (v: { memoryId: string; decision: "confirm" | "reject"; comment?: string }) => api.decideMemory(v.memoryId, v.decision, v.comment),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["ws", ws, "memory"] }),
   });
 }
@@ -159,4 +159,101 @@ export function useCreateProject() {
       void qc.invalidateQueries({ queryKey: qk.rooms(ws) });
     },
   });
+}
+
+// ---- V0.4 ----
+function useInvalidate() {
+  const ws = useWs();
+  const qc = useQueryClient();
+  return (...keys: string[]) => keys.forEach((k) => void qc.invalidateQueries({ queryKey: ["ws", ws, k] }));
+}
+export function useUsage() {
+  const api = useApi();
+  const ws = useWs();
+  return useQuery({ queryKey: qk.usage(ws), queryFn: () => api.usage(), enabled: !!ws });
+}
+export function useTrace(traceId: string | null) {
+  const api = useApi();
+  const ws = useWs();
+  return useQuery({ queryKey: qk.trace(ws, traceId ?? ""), queryFn: () => api.trace(traceId ?? ""), enabled: !!ws && !!traceId });
+}
+export function useProjectMembers(projectId: string) {
+  const api = useApi();
+  const ws = useWs();
+  return useQuery({ queryKey: qk.projectMembers(ws, projectId), queryFn: () => api.projectMembers(projectId), enabled: !!ws && !!projectId });
+}
+export function useApiTokens() {
+  const api = useApi();
+  return useQuery({ queryKey: ["tokens"], queryFn: () => api.apiTokens() });
+}
+export function useNudge() {
+  const api = useApi();
+  return useMutation({ mutationFn: (taskId: string) => api.nudge(taskId) });
+}
+export function useExpandBudget() {
+  const api = useApi();
+  return useAction((v: { taskId: string; maxTokens: number; comment?: string }) => api.expandBudget(v.taskId, v.maxTokens, v.comment));
+}
+export function useSetBudget() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({ mutationFn: (v: { scope: "workspace" | "user"; maxTokens: number }) => api.setBudget(v.scope, v.maxTokens), onSettled: () => inv("usage", "tasks") });
+}
+export function useRichAction() {
+  const api = useApi();
+  return useMutation({ mutationFn: (v: { messageId: string; actionId: string; value?: unknown }) => api.richAction(v.messageId, v.actionId, v.value) });
+}
+export function usePostToTask() {
+  const api = useApi();
+  return useMutation({ mutationFn: (v: { messageId: string; targetAgentId: string }) => api.postToTask(v.messageId, v.targetAgentId) });
+}
+export function useUpdateAgentPolicy() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { agentId: string } & Parameters<typeof api.updateAgentPolicy>[1]) => {
+      const { agentId, ...rest } = v;
+      return api.updateAgentPolicy(agentId, rest);
+    },
+    onSettled: () => inv("agents"),
+  });
+}
+export function useStartPatrol() {
+  const api = useApi();
+  return useAction((v: { agentId: string; roomId: string; prompt: string }) => api.startPatrol(v.agentId, v.roomId, v.prompt));
+}
+export function useProjectSettings() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { projectId: string; visibility?: string; test_command?: string; webhook_secret?: string }) => {
+      const { projectId, ...rest } = v;
+      return api.updateProjectSettings(projectId, rest);
+    },
+    onSettled: () => inv("projects", "rooms"),
+  });
+}
+export function useSetProjectMember() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (v: { projectId: string; userId: string; role: "lead" | "writer" | "viewer" | null }) =>
+      v.role ? api.setProjectMember(v.projectId, v.userId, v.role) : api.removeProjectMember(v.projectId, v.userId),
+    onSettled: () => inv("project-members", "projects"),
+  });
+}
+export function useEditMemory() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({ mutationFn: (v: { projectId: string; content: string }) => api.editMemory(v.projectId, v.content), onSettled: () => inv("memory") });
+}
+export function useTaintMemory() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({ mutationFn: (v: { memoryId: string; reason: string }) => api.taintMemory(v.memoryId, v.reason), onSettled: () => inv("memory", "tasks") });
+}
+export function useRevokeDaemon() {
+  const api = useApi();
+  const inv = useInvalidate();
+  return useMutation({ mutationFn: (id: string) => api.revokeDaemon(id), onSettled: () => inv("daemons", "agents") });
 }

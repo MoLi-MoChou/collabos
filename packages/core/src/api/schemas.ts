@@ -62,6 +62,8 @@ export const TaskResult = z
     acp_version: num,
     duration_ms: num,
     usage: Usage.nullable().optional(),
+    diff: str,
+    tests: z.object({ command: str, passed: z.boolean().catch(false), output: str }).nullable().optional(),
   })
   .partial();
 
@@ -87,6 +89,13 @@ export const Task = z.object({
   reason_code: str,
   used_tokens: num,
   result: TaskResult.catch({}),
+  trace_id: str,
+  depends_on: z.array(z.string()).nullable().catch([]).transform((v) => v ?? []),
+  approval_rule: z.enum(["ANY_ONE", "ALL"]).catch("ANY_ONE"),
+  autonomy: str,
+  acceptance: z.array(z.string()).nullable().catch([]).transform((v) => v ?? []),
+  tainted: z.boolean().catch(false),
+  decision_deadline: str,
   created_at: str,
   updated_at: str,
 });
@@ -114,6 +123,7 @@ export const Message = z.object({
   mentions: z.array(Mention).catch([]),
   card: z.record(z.string(), z.unknown()).nullable().catch(null),
   trust: str,
+  rich: z.object({ lang: str, version: str, source: str, agent_id: str, owner_id: str, trust: str }).nullable().catch(null).optional(),
   created_at: str,
 });
 export type Message = z.infer<typeof Message>;
@@ -144,6 +154,13 @@ export const Agent = z.object({
   intake_allowlist: z.array(z.string()).catch([]),
   daily_quota: num,
   online: z.boolean().catch(false),
+  autonomy: z.enum(["supervised", "standard", "autonomous"]).catch("standard"),
+  max_concurrent: num,
+  max_duration_min: num,
+  allowed_actions: z.array(z.string()).nullable().catch([]).transform((v) => v ?? []),
+  allow_network: z.boolean().catch(false),
+  intake_timeout_min: num,
+  daily_cost_units: num,
 });
 export type Agent = z.infer<typeof Agent>;
 
@@ -178,6 +195,11 @@ export const Project = z.object({
   provider: str,
   lead_id: str,
   room_id: str,
+  visibility: z.enum(["workspace", "restricted"]).catch("workspace"),
+  test_command: str,
+  webhook_path: str,
+  webhook_configured: z.boolean().catch(false),
+  my_role: str,
 });
 export type Project = z.infer<typeof Project>;
 
@@ -210,6 +232,9 @@ export const MemoryVersion = z.object({
   source_task_id: str,
   proposed_by: str,
   confirmed_by: str,
+  trust: str,
+  tainted: z.boolean().catch(false),
+  taint_reason: str,
   created_at: str,
 });
 export type MemoryVersion = z.infer<typeof MemoryVersion>;
@@ -230,13 +255,40 @@ export const Workspace = z.object({ id: z.string(), name: str, invite_code: str,
 export const Me = z.object({ id: z.string(), name: str, email: str, handle: str, workspaces: z.array(Workspace).catch([]) });
 export type Me = z.infer<typeof Me>;
 
-export const LoginResult = z.object({ token: z.string(), user_id: z.string(), name: str, email: str, handle: str, workspace_id: z.string() });
+export const LoginResult = z.object({ token: z.string(), refresh_token: str.optional(), expires_at: str.optional(), user_id: z.string(), name: str, email: str, handle: str, workspace_id: z.string() });
 export type LoginResult = z.infer<typeof LoginResult>;
 
 export const PairResult = z.object({ daemon: Daemon, node_token: z.string(), agents: z.array(Agent).catch([]) });
 export type PairResult = z.infer<typeof PairResult>;
 
 export const ApiError = z.object({ error: str, code: str });
+
+export const TokenPair = z.object({ token: z.string(), refresh_token: z.string(), expires_at: str });
+export const ApiToken = z.object({ id: z.string(), label: str, token: str.optional(), expires_at: str, created_at: str });
+export type ApiToken = z.infer<typeof ApiToken>;
+export const BudgetRow = z.object({ id: str, scope: z.enum(["workspace", "user"]).catch("workspace"), subject_id: str, max_tokens: num, used: num, period: str });
+export type BudgetRow = z.infer<typeof BudgetRow>;
+export const UsageRow = z.object({ subject_id: str, tokens: num, tasks: num });
+export const UsageView = z.object({
+  period: str,
+  total: num,
+  by_requester: z.array(UsageRow).nullable().catch([]).transform((v) => v ?? []),
+  by_owner: z.array(UsageRow).nullable().catch([]).transform((v) => v ?? []),
+  by_agent: z.array(UsageRow).nullable().catch([]).transform((v) => v ?? []),
+  budgets: z.array(BudgetRow).nullable().catch([]).transform((v) => v ?? []),
+});
+export type UsageView = z.infer<typeof UsageView>;
+export const ProjectMember = z.object({ user_id: z.string(), name: str, handle: str, role: z.enum(["lead", "writer", "viewer"]).catch("viewer") });
+export type ProjectMember = z.infer<typeof ProjectMember>;
+export const TraceView = z.object({
+  trace_id: str,
+  tasks: z.array(Task).nullable().catch([]).transform((v) => v ?? []),
+  events: z.array(TaskEvent).nullable().catch([]).transform((v) => v ?? []),
+  pull_requests: z.array(PullRequest).nullable().catch([]).transform((v) => v ?? []),
+  audit: z.array(AuditEntry).nullable().catch([]).transform((v) => v ?? []),
+});
+export type TraceView = z.infer<typeof TraceView>;
+export const TaintReport = z.object({ versions: z.array(num).catch([]), tasks: z.array(z.string()).catch([]) });
 
 // ---- chat cards ----
 export const DraftCard = z.object({
@@ -272,6 +324,10 @@ export const PermissionCard = z.object({
   reason_code: str,
   eligible: z.array(z.string()).catch([]),
   decided_by: str.optional(),
+  layer: str.optional(),
+  trust: str.optional(),
+  source_agent_id: str.optional(),
+  trace_id: str.optional(),
 });
 export const MergeCard = z.object({
   type: z.literal("merge"),
@@ -291,6 +347,13 @@ export const MergeCard = z.object({
   merge_commit: str.optional(),
   error: str.optional(),
   decided_by: str.optional(),
+  rule: z.enum(["ANY_ONE", "ALL"]).catch("ANY_ONE"),
+  category: str.optional(),
+  decisions: z.array(z.object({ by: str, decision: str, comment: str.optional() })).nullable().catch([]).transform((v) => v ?? []),
+  summary_trust: str.optional(),
+  source_agent_id: str.optional(),
+  trace_id: str.optional(),
+  tests: z.object({ command: str, passed: z.boolean().catch(false), output: str }).nullable().optional(),
 });
 export const MemoryCard = z.object({
   type: z.literal("memory"),
@@ -304,8 +367,30 @@ export const MemoryCard = z.object({
 });
 export const TaskCard = z.object({ type: z.literal("task"), task_id: z.string() });
 export const NoticeCard = z.object({ type: z.literal("notice"), code: str, task_id: str.optional() });
+export const BudgetCard = z.object({
+  type: z.literal("budget"),
+  state: z.enum(["pending", "approved"]).catch("pending"),
+  task_id: z.string(),
+  scope: str,
+  used: num,
+  max: num,
+  eligible: z.array(z.string()).catch([]),
+  decided_by: str.optional(),
+});
+export const NudgeCard = z.object({ type: z.literal("nudge"), task_id: z.string(), by: str, waiting_on: z.array(z.string()).nullable().catch([]).transform((v) => v ?? []) });
+export const AgentPostCard = z.object({
+  type: z.literal("agent_post"),
+  state: z.enum(["open", "converted"]).catch("open"),
+  task_id: str,
+  agent_id: str,
+  owner_id: str,
+  trace_id: str.optional(),
+  converted_task_id: str.optional(),
+});
+export const AgentReportCard = z.object({ type: z.literal("agent_report"), task_id: z.string() });
+export const RichReplyCard = z.object({ type: z.literal("rich_reply"), message_id: str, action_id: str });
 
-export const Card = z.discriminatedUnion("type", [DraftCard, IntakeCard, PermissionCard, MergeCard, MemoryCard, TaskCard, NoticeCard]);
+export const Card = z.discriminatedUnion("type", [DraftCard, IntakeCard, PermissionCard, MergeCard, MemoryCard, TaskCard, NoticeCard, BudgetCard, NudgeCard, AgentPostCard, AgentReportCard, RichReplyCard]);
 export type Card = z.infer<typeof Card>;
 export type DraftCard = z.infer<typeof DraftCard>;
 export type IntakeCard = z.infer<typeof IntakeCard>;
@@ -313,6 +398,9 @@ export type PermissionCard = z.infer<typeof PermissionCard>;
 export type MergeCard = z.infer<typeof MergeCard>;
 export type MemoryCard = z.infer<typeof MemoryCard>;
 export type NoticeCard = z.infer<typeof NoticeCard>;
+export type BudgetCard = z.infer<typeof BudgetCard>;
+export type NudgeCard = z.infer<typeof NudgeCard>;
+export type AgentPostCard = z.infer<typeof AgentPostCard>;
 
 /** Parses a message card; unknown card types render as plain messages. */
 export function parseCard(raw: unknown): Card | null {

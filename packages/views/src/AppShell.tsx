@@ -56,7 +56,7 @@ function Rail({ activeRoom }: { activeRoom: string | null }) {
   const me = useMe();
   const daemons = useDaemons();
   const myId = useMyId();
-  const { store } = useCore();
+  const { store, api } = useCore();
   const ui = useUi();
   const session = store((s) => s.session);
   const ws = me.data?.workspaces.find((w) => w.id === session?.workspaceId);
@@ -125,7 +125,7 @@ function Rail({ activeRoom }: { activeRoom: string | null }) {
         >
           {ui.theme === "light" ? <IconMoon /> : <IconSun />}
         </Button>
-        <Button size="icon" variant="ghost" aria-label={t("shell.logout")} title={t("shell.logout")} onClick={() => store.getState().setSession(null)}>
+        <Button size="icon" variant="ghost" aria-label={t("shell.logout")} title={t("shell.logout")} onClick={() => { void api.logout(store.getState().session?.refreshToken).catch(() => null); store.getState().setSession(null); }}>
           <IconLogout />
         </Button>
       </div>

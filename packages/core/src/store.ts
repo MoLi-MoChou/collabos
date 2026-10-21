@@ -10,10 +10,11 @@ export const Session = z.object({
   name: z.string(),
   handle: z.string(),
   workspaceId: z.string(),
+  refreshToken: z.string().optional(),
 });
 export type Session = z.infer<typeof Session>;
 
-export type DockTab = "tasks" | "people" | "memory" | "audit";
+export type DockTab = "tasks" | "people" | "memory" | "audit" | "usage";
 export type Theme = "light" | "dark";
 
 interface AppState {

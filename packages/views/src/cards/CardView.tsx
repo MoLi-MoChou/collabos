@@ -2,6 +2,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApiError,
+  useAgents,
+  useExpandBudget,
+  useNudge,
+  usePostToTask,
+  validReason,
+  type AgentPostCard,
+  type BudgetCard,
+  type NudgeCard,
   statusTone,
   useConfirmDraft,
   useDecideIntake,
@@ -22,6 +30,7 @@ import {
 import { Badge, Button, Card, CardBody, CardFooter, CardHeader, Code, Input, Label, Textarea } from "@collabos/ui";
 import { useDirectory } from "../directory";
 import { useMyId, useUi } from "../hooks";
+import { DiffBlock } from "./DiffBlock";
 
 export function CardView({ card, messageId, body }: { card: CardT; messageId: string; body: string }) {
   switch (card.type) {
@@ -39,6 +48,16 @@ export function CardView({ card, messageId, body }: { card: CardT; messageId: st
       return <TaskLine taskId={card.task_id} fallback={body} />;
     case "notice":
       return <NoticeView card={card} body={body} />;
+    case "budget":
+      return <BudgetView card={card} />;
+    case "nudge":
+      return <NudgeView card={card} body={body} />;
+    case "agent_post":
+      return <AgentPostView card={card} messageId={messageId} />;
+    case "agent_report":
+      return <TaskLine taskId={card.task_id} fallback={body} />;
+    case "rich_reply":
+      return null;
   }
 }
 
@@ -223,11 +242,10 @@ function IntakeView({ card }: { card: IntakeCard }) {
       {card.state === "pending" && (
         <CardFooter>
           <span className="flex-1 text-caption text-fg-subtle">{owner ? t("card.intake.ownerHint") : t("card.intake.waiting", { owner: dir.userName(card.owner_id) })}</span>
+          {!owner && <NudgeButton taskId={card.task_id} />}
           {owner && (
             <>
-              <Button size="sm" variant="ghost" onClick={() => decide.mutate({ taskId: card.task_id, decision: "reject" })} data-testid="intake-reject">
-                {t("card.intake.reject")}
-              </Button>
+              <RejectWithReason label={t("card.intake.reject")} testId="intake-reject" pending={decide.isPending} onConfirm={(comment) => decide.mutate({ taskId: card.task_id, decision: "reject", comment })} />
               <Button size="sm" variant="primary" onClick={() => decide.mutate({ taskId: card.task_id, decision: "accept" })} disabled={decide.isPending} data-testid="intake-accept">
                 {t("card.intake.accept")}
               </Button>
@@ -262,17 +280,17 @@ function PermissionView({ card }: { card: PermissionCard }) {
           {!card.paths.length && !card.command && <div>{card.title}</div>}
         </div>
         <div className="text-caption text-fg-subtle">{t(`reason.${card.reason_code}`, { defaultValue: card.reason_code })}</div>
+        <Provenance trust={card.trust} sourceAgentId={card.source_agent_id} extra={card.layer ? t(`card.layer.${card.layer}`, { defaultValue: card.layer }) : undefined} />
         {card.decided_by && <div className="text-caption text-fg-muted">{t("card.decidedBy", { name: dir.userName(card.decided_by) })}</div>}
         <ErrorText error={decide.error} />
       </CardBody>
       {card.state === "pending" && (
         <CardFooter>
           <span className="flex-1 text-caption text-fg-subtle">{eligible ? t("card.permission.hint") : t("card.permission.notEligible")}</span>
+          {!eligible && <NudgeButton taskId={card.task_id} />}
           {eligible && (
             <>
-              <Button size="sm" variant="ghost" onClick={() => decide.mutate({ permissionId: card.permission_id, decision: "deny" })} data-testid="permission-deny">
-                {t("card.permission.deny")}
-              </Button>
+              <RejectWithReason label={t("card.permission.deny")} testId="permission-deny" pending={decide.isPending} onConfirm={(comment) => decide.mutate({ permissionId: card.permission_id, decision: "deny", comment })} />
               <Button size="sm" variant="primary" onClick={() => decide.mutate({ permissionId: card.permission_id, decision: "allow" })} disabled={decide.isPending} data-testid="permission-allow">
                 {t("card.permission.allow")}
               </Button>
@@ -309,7 +327,23 @@ function MergeView({ card }: { card: MergeCard }) {
           <Code data-testid="merge-commit">{card.commit.slice(0, 10)}</Code>
         </div>
         {card.diff_stat && <pre className="overflow-x-auto rounded-control bg-term-bg px-3 py-2 font-mono text-mono text-term-fg">{card.diff_stat}</pre>}
-        {card.summary && <div className="whitespace-pre-wrap text-body text-fg-muted">{card.summary}</div>}
+        <div className="flex flex-wrap items-center gap-1.5" data-testid="merge-rule" data-rule={card.rule}>
+          <Badge tone={card.rule === "ALL" ? "warn" : "neutral"}>{t(`card.rule.${card.rule}`)}</Badge>
+          {card.rule === "ALL" && <span className="text-caption text-fg-muted">{t("card.rule.progress", { have: card.decisions.length, need: card.eligible.length })}</span>}
+          {card.category === "db_migration" && <Badge tone="danger">{t("card.category.db_migration")}</Badge>}
+          {card.tests && (
+            <Badge tone={card.tests.passed ? "success" : "danger"} data-testid="merge-tests">
+              {t(card.tests.passed ? "card.tests.passed" : "card.tests.failed", { command: card.tests.command })}
+            </Badge>
+          )}
+        </div>
+        {card.summary && (
+          <div className="flex flex-col gap-1">
+            <Provenance trust={card.summary_trust} sourceAgentId={card.source_agent_id} />
+            <div className="whitespace-pre-wrap text-body text-fg-muted">{card.summary}</div>
+          </div>
+        )}
+        <DiffToggle taskId={card.task_id} />
         {card.merge_commit && <div className="text-caption text-success">{t("card.merge.mergedAs", { commit: card.merge_commit.slice(0, 10) })}</div>}
         {card.error && <div className="text-caption text-danger">{card.error}</div>}
         {card.decided_by && <div className="text-caption text-fg-muted">{t("card.decidedBy", { name: dir.userName(card.decided_by) })}</div>}
@@ -318,11 +352,10 @@ function MergeView({ card }: { card: MergeCard }) {
       {open && (
         <CardFooter>
           <span className="flex-1 text-caption text-fg-subtle">{eligible ? t("card.merge.hint") : t("card.merge.locked")}</span>
+          {!eligible && <NudgeButton taskId={card.task_id} />}
           {eligible && (
             <>
-              <Button size="sm" variant="ghost" onClick={() => decide.mutate({ approvalId: card.approval_id, decision: "reject" })} data-testid="merge-reject">
-                {t("card.merge.reject")}
-              </Button>
+              <RejectWithReason label={t("card.merge.reject")} testId="merge-reject" pending={decide.isPending} onConfirm={(comment) => decide.mutate({ approvalId: card.approval_id, decision: "reject", comment })} />
               <Button size="sm" variant="success" onClick={() => decide.mutate({ approvalId: card.approval_id, decision: "approve" })} disabled={decide.isPending} data-testid="merge-approve">
                 {t("card.merge.approve")}
               </Button>
@@ -355,9 +388,7 @@ function MemoryView({ card }: { card: MemoryCard }) {
           <span className="flex-1 text-caption text-fg-subtle">{lead ? t("card.memory.hint") : t("card.memory.waiting", { lead: dir.userName(card.lead_id) })}</span>
           {lead && (
             <>
-              <Button size="sm" variant="ghost" onClick={() => decide.mutate({ memoryId: card.memory_id, decision: "reject" })}>
-                {t("card.memory.reject")}
-              </Button>
+              <RejectWithReason label={t("card.memory.reject")} testId="memory-reject" pending={decide.isPending} onConfirm={(comment) => decide.mutate({ memoryId: card.memory_id, decision: "reject", comment })} />
               <Button size="sm" variant="primary" onClick={() => decide.mutate({ memoryId: card.memory_id, decision: "confirm" })} data-testid="memory-confirm">
                 {t("card.memory.confirm")}
               </Button>
@@ -381,6 +412,150 @@ function NoticeView({ card, body }: { card: NoticeCard; body: string }) {
     >
       <span className="font-medium">{t(`reason.${card.code}`, { defaultValue: card.code })}</span>
       <span className="truncate text-fg-muted">{body}</span>
+    </div>
+  );
+}
+
+function Provenance({ trust, sourceAgentId, extra }: { trust?: string; sourceAgentId?: string; extra?: string }) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  if (!trust && !sourceAgentId) return null;
+  const agent = sourceAgentId ? dir.agent(sourceAgentId) : undefined;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-caption text-fg-subtle" data-testid="provenance" data-trust={trust}>
+      {trust === "untrusted" && <Badge tone="warn">{t("chat.untrusted")}</Badge>}
+      {agent && <span>{t("card.source", { handle: agent.handle, owner: dir.ownerName(agent) })}</span>}
+      {extra && <Badge>{extra}</Badge>}
+    </div>
+  );
+}
+
+/** Reject/deny needs a reason (PRD 7.3): the button opens an inline reason field. */
+function RejectWithReason({ label, testId, pending, onConfirm }: { label: string; testId: string; pending: boolean; onConfirm: (comment: string) => void }) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  if (!open) {
+    return (
+      <Button size="sm" variant="ghost" onClick={() => setOpen(true)} data-testid={testId}>
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <form
+      className="flex items-center gap-1.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (validReason(reason)) onConfirm(reason.trim());
+      }}
+    >
+      <Input autoFocus value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("card.reason.placeholder")} className="h-8 w-48" data-testid="reason-input" />
+      <Button size="sm" variant="ghost" type="button" onClick={() => setOpen(false)}>
+        {t("common.cancel")}
+      </Button>
+      <Button size="sm" variant="danger" type="submit" disabled={pending || !validReason(reason)} data-testid="reason-confirm">
+        {label}
+      </Button>
+    </form>
+  );
+}
+
+/** Non-approvers can chase the decision makers (rate-limited server side). */
+function NudgeButton({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
+  const nudge = useNudge();
+  return (
+    <Button size="sm" variant="ghost" disabled={nudge.isPending || nudge.isSuccess} onClick={() => nudge.mutate(taskId)} data-testid="nudge" title={nudge.error instanceof ApiError ? nudge.error.message : undefined}>
+      {nudge.isSuccess ? t("card.nudge.sent") : t("card.nudge.action")}
+    </Button>
+  );
+}
+
+function DiffToggle({ taskId }: { taskId: string }) {
+  const { t } = useTranslation();
+  const task = useTask(taskId);
+  const [open, setOpen] = useState(false);
+  const diff = task?.result.diff;
+  if (!diff) return null;
+  return (
+    <div className="flex flex-col gap-1">
+      <button type="button" className="w-fit cursor-pointer text-caption text-accent" onClick={() => setOpen(!open)} data-testid="diff-toggle">
+        {open ? t("card.diff.hide") : t("card.diff.show")}
+      </button>
+      {open && <DiffBlock diff={diff} />}
+    </div>
+  );
+}
+
+function BudgetView({ card }: { card: BudgetCard }) {
+  const { t } = useTranslation();
+  const me = useMyId();
+  const dir = useDirectory();
+  const expand = useExpandBudget();
+  const [max, setMax] = useState(String(Math.max(card.max * 2, card.used + 1000)));
+  const eligible = card.eligible.includes(me);
+  const pending = card.state === "pending";
+  return (
+    <Card data-testid="budget-card" data-state={card.state} data-task-id={card.task_id} className={pending ? "shadow-ring-warn" : ""}>
+      <CardHeader>
+        <Badge tone={pending ? "warn" : "success"}>{t(`card.budget.${card.state}`)}</Badge>
+        <span className="text-body font-medium">{t(`card.budget.scope_${card.scope}`, { defaultValue: card.scope })}</span>
+      </CardHeader>
+      <CardBody className="flex flex-col gap-2">
+        <div className="h-2 w-full overflow-hidden rounded-pill bg-tag">
+          <div className="h-full bg-danger" style={{ width: `${Math.min(100, (100 * card.used) / Math.max(1, card.max))}%` }} />
+        </div>
+        <div className="text-caption text-fg-muted">{t("card.budget.usage", { used: card.used.toLocaleString(), max: card.max.toLocaleString() })}</div>
+        <div className="text-caption text-fg-subtle">{t("card.budget.eligible", { names: card.eligible.map(dir.userName).join("、") })}</div>
+        <ErrorText error={expand.error} />
+      </CardBody>
+      {pending && eligible && card.scope === "task" && (
+        <CardFooter>
+          <Input type="number" value={max} onChange={(e) => setMax(e.target.value)} className="h-8 w-32" data-testid="budget-max" />
+          <span className="flex-1" />
+          <Button size="sm" variant="primary" disabled={expand.isPending} onClick={() => expand.mutate({ taskId: card.task_id, maxTokens: Number(max) })} data-testid="budget-expand">
+            {t("card.budget.expand")}
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
+  );
+}
+
+function NudgeView({ card, body }: { card: NudgeCard; body: string }) {
+  const { t } = useTranslation();
+  const dir = useDirectory();
+  return (
+    <div className="mx-auto flex w-fit max-w-full items-center gap-1.5 rounded-pill bg-warn-soft px-3 py-1 text-caption text-warn" data-testid="nudge-card" data-task-id={card.task_id}>
+      <span className="font-medium">{t("card.nudge.title", { name: dir.userName(card.by) })}</span>
+      <span className="truncate">{card.waiting_on.length ? card.waiting_on.map(dir.userName).join("、") : body}</span>
+    </div>
+  );
+}
+
+function AgentPostView({ card, messageId }: { card: AgentPostCard; messageId: string }) {
+  const { t } = useTranslation();
+  const agents = useAgents();
+  const convert = usePostToTask();
+  const [target, setTarget] = useState("");
+  const list = (agents.data ?? []).filter((a) => a.kind === "specialist");
+  if (card.state === "converted") return <Badge tone="success" data-testid="post-converted">{t("card.post.converted")}</Badge>;
+  return (
+    <div className="flex items-center gap-1.5" data-testid="agent-post">
+      <Badge tone="accent">{t("card.post.badge")}</Badge>
+      <select className="h-8 rounded-control bg-tag px-2 text-caption" value={target} onChange={(e) => setTarget(e.target.value)} data-testid="post-target">
+        <option value="">{t("card.post.pick")}</option>
+        {list.map((a) => (
+          <option key={a.id} value={a.id}>
+            @{a.handle}
+          </option>
+        ))}
+      </select>
+      <Button size="sm" variant="secondary" disabled={!target || convert.isPending} onClick={() => convert.mutate({ messageId, targetAgentId: target })} data-testid="post-to-task">
+        {t("card.post.toTask")}
+      </Button>
+      <ErrorText error={convert.error} />
     </div>
   );
 }

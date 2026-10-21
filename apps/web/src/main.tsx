@@ -21,6 +21,11 @@ const api = new ApiClient({
   getToken: () => store.getState().session?.token ?? null,
   getWorkspaceId: () => store.getState().session?.workspaceId ?? null,
   onUnauthorized: () => store.getState().setSession(null),
+  getRefreshToken: () => store.getState().session?.refreshToken ?? null,
+  onTokens: (t) => {
+    const s = store.getState().session;
+    if (s) store.getState().setSession({ ...s, token: t.token, refreshToken: t.refresh_token });
+  },
 });
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } });
 

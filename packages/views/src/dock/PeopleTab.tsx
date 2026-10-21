@@ -4,9 +4,10 @@ import { ApiError, useDaemons, usePair, useUpdateIntake, type Agent, type PairRe
 import { Avatar, Badge, Button, Code, Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger, Dot, Input, Label } from "@collabos/ui";
 import { useDirectory } from "../directory";
 import { useMyId } from "../hooks";
+import { AgentPolicyEditor } from "./V04Panels";
 import { useApi } from "@collabos/core";
 
-export function PeopleTab() {
+export function PeopleTab({ roomId = "" }: { roomId?: string }) {
   const { t } = useTranslation();
   const dir = useDirectory();
   const daemons = useDaemons();
@@ -28,7 +29,7 @@ export function PeopleTab() {
         <div className="mb-2 px-1 text-tiny font-medium text-fg-subtle">{t("dock.agents")}</div>
         <div className="flex flex-col gap-1.5">
           {dir.agents.map((a) => (
-            <AgentRow key={a.id} a={a} mine={a.owner_id === me} />
+            <AgentRow key={a.id} a={a} mine={a.owner_id === me} roomId={roomId} />
           ))}
         </div>
       </section>
@@ -60,7 +61,7 @@ export function PeopleTab() {
   );
 }
 
-function AgentRow({ a, mine }: { a: Agent; mine: boolean }) {
+function AgentRow({ a, mine, roomId }: { a: Agent; mine: boolean; roomId: string }) {
   const { t } = useTranslation();
   const dir = useDirectory();
   const update = useUpdateIntake();
@@ -68,6 +69,7 @@ function AgentRow({ a, mine }: { a: Agent; mine: boolean }) {
   const [quota, setQuota] = useState(String(a.daily_quota));
   const [allow, setAllow] = useState<string[]>(a.intake_allowlist);
   const [edit, setEdit] = useState(false);
+  const [policy, setPolicy] = useState(false);
   return (
     <div className="rounded-card bg-surface shadow-card px-3 py-2" data-testid="agent" data-handle={a.handle}>
       <div className="flex items-center gap-2">
@@ -78,6 +80,18 @@ function AgentRow({ a, mine }: { a: Agent; mine: boolean }) {
         <span className="flex-1" />
         <span className="text-caption text-fg-subtle">{dir.ownerName(a)}</span>
       </div>
+      <div className="mt-1 flex items-center gap-2 text-caption text-fg-muted">
+        <Badge tone={a.autonomy === "autonomous" ? "accent" : a.autonomy === "supervised" ? "warn" : "neutral"} data-testid="agent-autonomy">
+          {t(`policy.${a.autonomy}`)}
+        </Badge>
+        <span className="flex-1" />
+        {mine && (
+          <Button size="sm" variant="ghost" onClick={() => setPolicy(!policy)} data-testid="policy-edit">
+            {t("policy.title")}
+          </Button>
+        )}
+      </div>
+      {policy && <AgentPolicyEditor a={a} roomId={roomId} />}
       {a.kind === "specialist" && (
         <div className="mt-1 flex items-center gap-2 text-caption text-fg-muted">
           <span>{t(`intake.${a.intake_mode}`)}</span>

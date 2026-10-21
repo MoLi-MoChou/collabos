@@ -6,6 +6,8 @@ import { useDirectory } from "../directory";
 import { useMyId, useUi } from "../hooks";
 import { IconHash, IconPanel, IconPlus, IconSend } from "../icons";
 import { CardView } from "../cards/CardView";
+import { RichMessage } from "../rich/RichMessage";
+import { Fenced } from "./Fenced";
 
 export function ChatView({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
@@ -98,7 +100,8 @@ function MessageRow({ m }: { m: Message }) {
           {m.trust === "untrusted" && m.sender_type === "agent" && <Badge tone="warn">{t("chat.untrusted")}</Badge>}
           <span className="text-tiny text-fg-subtle">{time}</span>
         </div>
-        <div className="w-fit max-w-full whitespace-pre-wrap break-words rounded-bubble bg-bubble px-3.5 py-2 text-body-lg text-bubble-fg">{text}</div>
+        {m.body.trim() && <div className="w-fit max-w-full whitespace-pre-wrap break-words rounded-bubble bg-bubble px-3.5 py-2 text-body-lg text-bubble-fg">{m.body.includes("```") ? <Fenced body={m.body} /> : text}</div>}
+        {m.rich && <div className="mt-2 w-full max-w-160"><RichMessage message={m} /></div>}
         {card && <div className="mt-2 w-full max-w-160"><CardView card={card} messageId={m.id} body={m.body} /></div>}
       </div>
     </div>

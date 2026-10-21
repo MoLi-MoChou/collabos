@@ -6,9 +6,10 @@ import { TasksTab } from "./TasksTab";
 import { PeopleTab } from "./PeopleTab";
 import { MemoryTab } from "./MemoryTab";
 import { AuditTab } from "./AuditTab";
+import { UsageTab } from "./V04Panels";
 
 function isTab(v: string): v is DockTab {
-  return v === "tasks" || v === "people" || v === "memory" || v === "audit";
+  return v === "tasks" || v === "people" || v === "memory" || v === "audit" || v === "usage";
 }
 
 export function Dock({ roomId }: { roomId: string }) {
@@ -20,13 +21,17 @@ export function Dock({ roomId }: { roomId: string }) {
         <TabsTrigger value="tasks" data-testid="tab-tasks">{t("dock.tasks")}</TabsTrigger>
         <TabsTrigger value="people" data-testid="tab-people">{t("dock.people")}</TabsTrigger>
         <TabsTrigger value="memory" data-testid="tab-memory">{t("dock.memory")}</TabsTrigger>
+        <TabsTrigger value="usage" data-testid="tab-usage">{t("dock.usage")}</TabsTrigger>
         <TabsTrigger value="audit" data-testid="tab-audit">{t("dock.audit")}</TabsTrigger>
       </TabsList>
       <TabsContent value="tasks">
         <TasksTab />
       </TabsContent>
       <TabsContent value="people">
-        <PeopleTab />
+        <PeopleTab roomId={roomId} />
+      </TabsContent>
+      <TabsContent value="usage">
+        <UsageTab />
       </TabsContent>
       <TabsContent value="audit">
         <AuditTab />

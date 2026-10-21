@@ -22,7 +22,7 @@ export function LoginView({ needsPassword = false }: { needsPassword?: boolean }
     setErr("");
     try {
       const r = await api.devLogin({ email, name, handle, invite_code: invite, password });
-      store.getState().setSession({ token: r.token, userId: r.user_id, name: r.name, handle: r.handle, workspaceId: r.workspace_id });
+      store.getState().setSession({ token: r.token, userId: r.user_id, name: r.name, handle: r.handle, workspaceId: r.workspace_id, refreshToken: r.refresh_token || undefined });
     } catch (x) {
       setErr(x instanceof ApiError ? x.message : t("common.error"));
     } finally {

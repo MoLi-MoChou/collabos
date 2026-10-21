@@ -2,7 +2,8 @@
   "common": {
     "error": "出错了，请重试",
     "back": "返回",
-    "save": "保存"
+    "save": "保存",
+    "cancel": "取消"
   },
   "login": {
     "title": "登录 CollabOS",
@@ -113,6 +114,52 @@
       "waiting": "等待项目负责人 {{lead}} 确认",
       "confirm": "确认",
       "reject": "拒绝"
+    },
+    "source": "来自 @{{handle}}（{{owner}} 的 Bot）",
+    "layer": {
+      "scope": "授权范围",
+      "sandbox": "沙箱",
+      "autonomy": "自主级别"
+    },
+    "rule": {
+      "ANY_ONE": "任一审批人",
+      "ALL": "全部审批人",
+      "progress": "已批准 {{have}}/{{need}}"
+    },
+    "category": {
+      "db_migration": "数据库迁移"
+    },
+    "tests": {
+      "passed": "测试通过（{{command}}）",
+      "failed": "测试失败（{{command}}）"
+    },
+    "reason": {
+      "placeholder": "请填写理由（必填）"
+    },
+    "nudge": {
+      "action": "催办",
+      "sent": "已催办",
+      "title": "{{name}} 催办："
+    },
+    "diff": {
+      "show": "查看 diff",
+      "hide": "收起 diff"
+    },
+    "budget": {
+      "pending": "预算用尽 · 已暂停",
+      "approved": "已扩容",
+      "scope_task": "任务预算",
+      "scope_user": "个人月度预算",
+      "scope_workspace": "团队月度预算",
+      "usage": "已用 {{used}} / {{max}} tokens",
+      "eligible": "可审批扩容：{{names}}",
+      "expand": "批准扩容"
+    },
+    "post": {
+      "badge": "Bot 发现",
+      "pick": "选择执行 Bot",
+      "toTask": "转为任务",
+      "converted": "已转为任务"
     }
   },
   "dock": {
@@ -138,7 +185,8 @@
     "quota": "每日 {{n}} 单",
     "editIntake": "接单策略",
     "quotaLabel": "每日上限",
-    "audit": "审计"
+    "audit": "审计",
+    "usage": "用量"
   },
   "memory": {
     "lead": "项目负责人：{{name}}",
@@ -214,7 +262,20 @@
     "canceled_by_user": "已被用户取消",
     "unknown_target": "委托目标不存在",
     "repo_not_configured": "设备未配置该仓库",
-    "agent_failed": "Agent 运行失败"
+    "agent_failed": "Agent 运行失败",
+    "waiting_dependencies": "等待依赖完成",
+    "dependency_failed": "依赖任务失败",
+    "concurrency_limit": "Bot 并发已满",
+    "awaiting_merge": "等待合并",
+    "decision_timeout": "决策超时，任务已暂停",
+    "intake_timeout": "接单超时",
+    "grant_expired": "授权已过期",
+    "host_offline": "宿主离线，已排队",
+    "budget_warning": "预算已用 90%",
+    "memory_tainted": "项目记忆被标记污染",
+    "merged_on_platform": "已在平台合并",
+    "pr_closed_on_platform": "PR 已在平台关闭",
+    "autonomy_supervised": "监督模式需要审批"
   },
   "pr": {
     "open": "待合并",
@@ -236,5 +297,75 @@
       "system": "系统",
       "daemon": "设备"
     }
+  },
+  "rich": {
+    "untrusted": "Bot 生成 · 非可信",
+    "source": "@{{handle}} · {{owner}} 的 Bot",
+    "sent": "已回复"
+  },
+  "usage": {
+    "title": "本月用量",
+    "total": "合计 {{total}} tokens",
+    "byRequester": "按发起人",
+    "byOwner": "按 Bot 主人",
+    "byAgent": "按 Bot",
+    "budgets": "预算",
+    "team": "团队月度预算",
+    "mine": "我的月度预算",
+    "save": "保存",
+    "tasks": "{{n}} 个任务",
+    "none": "暂无用量"
+  },
+  "trace": {
+    "title": "链路 {{id}}",
+    "tasks": "任务",
+    "prs": "PR",
+    "audit": "审计"
+  },
+  "policy": {
+    "title": "自主与约束",
+    "autonomy": "自主级别",
+    "supervised": "监督（每步审批）",
+    "standard": "标准",
+    "autonomous": "自主（可直接转派）",
+    "maxConcurrent": "最大并发",
+    "maxDuration": "最长时长（分钟）",
+    "network": "允许联网",
+    "intakeTimeout": "接单超时（分钟）",
+    "save": "保存策略",
+    "patrol": "巡检",
+    "patrolPrompt": "巡检内容"
+  },
+  "project": {
+    "members": "项目成员",
+    "visibility": "可见性",
+    "workspace": "工作区可见",
+    "restricted": "仅成员",
+    "testCommand": "测试命令",
+    "webhook": "Webhook",
+    "webhookSecret": "Webhook 密钥",
+    "save": "保存",
+    "lead": "负责人",
+    "writer": "成员",
+    "viewer": "只读",
+    "remove": "移除",
+    "add": "添加"
+  },
+  "memory2": {
+    "edit": "编辑",
+    "save": "提交修改",
+    "taint": "标记污染",
+    "taintReason": "污染原因",
+    "tainted": "已污染",
+    "refs": "引用任务 {{n}} 个",
+    "trust_auto_generated": "自动生成",
+    "trust_external_bot": "外部 Bot",
+    "trust_confirmed": "已确认"
+  },
+  "task2": {
+    "trace": "链路",
+    "depends": "依赖",
+    "tainted": "上下文已污染",
+    "deadline": "决策截止 {{time}}"
   }
 }

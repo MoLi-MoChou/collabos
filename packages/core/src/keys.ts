@@ -13,4 +13,7 @@ export const qk = {
   prs: (ws: string) => ["ws", ws, "prs"] as const,
   memory: (ws: string, project: string) => ["ws", ws, "memory", project] as const,
   audit: (ws: string) => ["ws", ws, "audit"] as const,
+  usage: (ws: string) => ["ws", ws, "usage"] as const,
+  trace: (ws: string, id: string) => ["ws", ws, "trace", id] as const,
+  projectMembers: (ws: string, project: string) => ["ws", ws, "project-members", project] as const,
 };

@@ -1,5 +1,6 @@
 export * from "./api/schemas";
 export { ApiClient, ApiError, type ApiClientOptions } from "./api/client";
+export { createCollabClient, type CollabClientOptions } from "./sdk";
 export { RealtimeClient, type RealtimeOptions } from "./realtime/client";
 export { applyEnvelope, upsertMessage, appendEvent } from "./realtime/apply";
 export type * as Protocol from "./realtime/protocol.gen";
@@ -11,4 +12,5 @@ export { qk } from "./keys";
 export * from "./queries";
 export * from "./mentions";
 export * from "./status";
+export * from "./text";
 export { initI18n } from "./i18n";

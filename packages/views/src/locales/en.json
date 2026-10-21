@@ -2,7 +2,8 @@
   "common": {
     "error": "Something went wrong, please retry",
     "back": "Back",
-    "save": "Save"
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "login": {
     "title": "Sign in to CollabOS",
@@ -113,6 +114,52 @@
       "waiting": "Waiting for project lead {{lead}}",
       "confirm": "Confirm",
       "reject": "Reject"
+    },
+    "source": "from @{{handle}} ({{owner}}'s bot)",
+    "layer": {
+      "scope": "grant",
+      "sandbox": "sandbox",
+      "autonomy": "autonomy"
+    },
+    "rule": {
+      "ANY_ONE": "Any approver",
+      "ALL": "All approvers",
+      "progress": "{{have}}/{{need}} approved"
+    },
+    "category": {
+      "db_migration": "DB migration"
+    },
+    "tests": {
+      "passed": "Tests passed ({{command}})",
+      "failed": "Tests failed ({{command}})"
+    },
+    "reason": {
+      "placeholder": "Reason (required)"
+    },
+    "nudge": {
+      "action": "Nudge",
+      "sent": "Nudged",
+      "title": "{{name}} nudged:"
+    },
+    "diff": {
+      "show": "Show diff",
+      "hide": "Hide diff"
+    },
+    "budget": {
+      "pending": "Budget used up · paused",
+      "approved": "Expanded",
+      "scope_task": "Task budget",
+      "scope_user": "Personal monthly budget",
+      "scope_workspace": "Team monthly budget",
+      "usage": "{{used}} / {{max}} tokens used",
+      "eligible": "Can approve: {{names}}",
+      "expand": "Approve expansion"
+    },
+    "post": {
+      "badge": "Bot finding",
+      "pick": "Pick a bot",
+      "toTask": "Convert to task",
+      "converted": "Converted to task"
     }
   },
   "dock": {
@@ -138,7 +185,8 @@
     "quota": "{{n}} per day",
     "editIntake": "Intake policy",
     "quotaLabel": "Daily quota",
-    "audit": "Audit"
+    "audit": "Audit",
+    "usage": "Usage"
   },
   "memory": {
     "lead": "Project lead: {{name}}",
@@ -214,7 +262,20 @@
     "canceled_by_user": "Canceled by a user",
     "unknown_target": "Unknown delegation target",
     "repo_not_configured": "Repository not configured on device",
-    "agent_failed": "Agent failed"
+    "agent_failed": "Agent failed",
+    "waiting_dependencies": "Waiting for dependencies",
+    "dependency_failed": "A dependency failed",
+    "concurrency_limit": "Bot is at its concurrency limit",
+    "awaiting_merge": "Awaiting merge",
+    "decision_timeout": "Decision timed out; task paused",
+    "intake_timeout": "Intake timed out",
+    "grant_expired": "Grant expired",
+    "host_offline": "Host offline; queued",
+    "budget_warning": "90% of budget used",
+    "memory_tainted": "Project memory marked tainted",
+    "merged_on_platform": "Merged on the platform",
+    "pr_closed_on_platform": "PR closed on the platform",
+    "autonomy_supervised": "Supervised mode needs approval"
   },
   "pr": {
     "open": "Open",
@@ -236,5 +297,75 @@
       "system": "system",
       "daemon": "device"
     }
+  },
+  "rich": {
+    "untrusted": "Bot-generated · untrusted",
+    "source": "@{{handle}} · {{owner}}'s bot",
+    "sent": "Replied"
+  },
+  "usage": {
+    "title": "This month",
+    "total": "{{total}} tokens total",
+    "byRequester": "By requester",
+    "byOwner": "By bot owner",
+    "byAgent": "By bot",
+    "budgets": "Budgets",
+    "team": "Team monthly budget",
+    "mine": "My monthly budget",
+    "save": "Save",
+    "tasks": "{{n}} tasks",
+    "none": "No usage yet"
+  },
+  "trace": {
+    "title": "Trace {{id}}",
+    "tasks": "Tasks",
+    "prs": "PRs",
+    "audit": "Audit"
+  },
+  "policy": {
+    "title": "Autonomy & limits",
+    "autonomy": "Autonomy",
+    "supervised": "Supervised (approve each step)",
+    "standard": "Standard",
+    "autonomous": "Autonomous (may sub-delegate)",
+    "maxConcurrent": "Max concurrent",
+    "maxDuration": "Max duration (min)",
+    "network": "Allow network",
+    "intakeTimeout": "Intake timeout (min)",
+    "save": "Save policy",
+    "patrol": "Patrol",
+    "patrolPrompt": "What to check"
+  },
+  "project": {
+    "members": "Project members",
+    "visibility": "Visibility",
+    "workspace": "Whole workspace",
+    "restricted": "Members only",
+    "testCommand": "Test command",
+    "webhook": "Webhook",
+    "webhookSecret": "Webhook secret",
+    "save": "Save",
+    "lead": "Lead",
+    "writer": "Writer",
+    "viewer": "Viewer",
+    "remove": "Remove",
+    "add": "Add"
+  },
+  "memory2": {
+    "edit": "Edit",
+    "save": "Submit edit",
+    "taint": "Mark tainted",
+    "taintReason": "Why is it tainted?",
+    "tainted": "Tainted",
+    "refs": "Used by {{n}} tasks",
+    "trust_auto_generated": "auto-generated",
+    "trust_external_bot": "external bot",
+    "trust_confirmed": "confirmed"
+  },
+  "task2": {
+    "trace": "Trace",
+    "depends": "Depends on",
+    "tainted": "Context tainted",
+    "deadline": "Decision due {{time}}"
   }
 }

@@ -109,3 +109,10 @@ export async function pair(p: Person, device: string, chief: string, coder: stri
   expect(token).not.toBe("");
   return token;
 }
+
+/** Clicks a reject/deny button and fills the required reason (PRD 7.3). */
+export async function rejectWith(scope: Locator, testId: string, reason: string): Promise<void> {
+  await scope.getByTestId(testId).click();
+  await scope.getByTestId("reason-input").fill(reason);
+  await scope.getByTestId("reason-confirm").click();
+}

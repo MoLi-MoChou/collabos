@@ -3,6 +3,7 @@ import { useDecideMemory, useMemory, useProjects, useRooms } from "@collabos/cor
 import { Badge, Button } from "@collabos/ui";
 import { useDirectory } from "../directory";
 import { useMyId } from "../hooks";
+import { MemoryEditor, ProjectAccessPanel, TaintButton } from "./V04Panels";
 
 export function MemoryTab({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
@@ -15,7 +16,7 @@ export function MemoryTab({ roomId }: { roomId: string }) {
   const me = useMyId();
   const dir = useDirectory();
   const versions = mem.data ?? [];
-  const current = versions.find((v) => v.status === "confirmed");
+  const current = versions.find((v) => v.status === "confirmed" && !v.tainted);
   const pending = versions.filter((v) => v.status === "pending");
   const lead = project?.lead_id === me;
   return (
@@ -23,6 +24,7 @@ export function MemoryTab({ roomId }: { roomId: string }) {
       <div className="flex items-center gap-2 px-1 text-caption text-fg-subtle">
         <span className="flex-1">{t("memory.lead", { name: dir.userName(project?.lead_id ?? "") })}</span>
         {current && <Badge tone="success" data-testid="memory-version">{t("memory.version", { v: current.version })}</Badge>}
+        {project && project.my_role !== "viewer" && <MemoryEditor projectId={project.id} current={current?.content ?? ""} />}
       </div>
       {pending.map((v) => (
         <div key={v.id} className="rounded-card bg-surface shadow-ring-warn p-3" data-testid="memory-pending">
@@ -31,7 +33,7 @@ export function MemoryTab({ roomId }: { roomId: string }) {
             <span className="flex-1" />
             {lead && (
               <>
-                <Button size="sm" variant="ghost" onClick={() => decide.mutate({ memoryId: v.id, decision: "reject" })}>
+                <Button size="sm" variant="ghost" onClick={() => decide.mutate({ memoryId: v.id, decision: "reject", comment: "rejected by lead" })}>
                   {t("card.memory.reject")}
                 </Button>
                 <Button size="sm" variant="primary" onClick={() => decide.mutate({ memoryId: v.id, decision: "confirm" })}>
@@ -52,8 +54,12 @@ export function MemoryTab({ roomId }: { roomId: string }) {
           <span className="font-mono">{`v${v.version}`}</span>
           <Badge tone={v.status === "confirmed" ? "success" : v.status === "pending" ? "warn" : "danger"}>{t(`card.memory.${v.status}`)}</Badge>
           <span className="text-fg-subtle">{v.proposed_by.startsWith("agent:") ? t("memory.byAgent") : t("memory.bySystem")}</span>
+          {v.trust && <Badge>{t(`memory2.trust_${v.trust}`, { defaultValue: v.trust })}</Badge>}
+          <span className="flex-1" />
+          {lead || v.tainted ? <TaintButton v={v} /> : null}
         </div>
       ))}
+      {project && <ProjectAccessPanel project={project} />}
     </div>
   );
 }
