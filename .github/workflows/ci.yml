@@ -1,0 +1,56 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: collab
+          POSTGRES_PASSWORD: collab
+          POSTGRES_DB: collab
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U collab" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://collab:collab@localhost:5432/collab?sslmode=disable
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - run: sudo apt-get update && sudo apt-get install -y bubblewrap
+      - run: go vet ./...
+      - name: migrations up/down/up from scratch
+        run: go run ./cmd/migrate up && go run ./cmd/migrate down && go run ./cmd/migrate up && go run ./cmd/migrate version
+      - run: go test -race ./...
+      - name: sqlc and protocol types are up to date
+        run: |
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
+          go install github.com/gzuidhof/tygo@latest
+          sqlc generate && tygo generate
+          git diff --exit-code
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build
