@@ -1,0 +1,5 @@
+packages:
+  - path: "github.com/collabos/collabos/server/pkg/protocol"
+    output_path: "../packages/core/src/realtime/protocol.gen.ts"
+    type_mappings:
+      json.RawMessage: "unknown"
