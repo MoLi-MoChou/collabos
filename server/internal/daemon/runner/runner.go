@@ -49,6 +49,9 @@ type Job struct {
 	Control *Control
 	// Limits caps the agent process (FR-DAE-103).
 	Limits Limits
+	// InactivityTimeout fails the run with agent_inactive when the agent
+	// sends nothing for this long outside human waits; 0 disables.
+	InactivityTimeout time.Duration
 }
 
 // Limits are per-task resource caps applied with prlimit(1) when available.
@@ -90,6 +93,9 @@ func (c *Control) Resume() bool {
 
 // Paused reports whether the job is suspended.
 func (c *Control) Paused() bool {
+	if c == nil {
+		return false
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.paused
@@ -178,6 +184,10 @@ func Run(ctx context.Context, j Job) protocol.DaemonTaskCompleted {
 	res.Summary = strings.TrimSpace(r.summary.String())
 	res.UI = r.ui
 	if err != nil {
+		var ie *InactiveError
+		if errors.As(err, &ie) {
+			return fail(delegation.CodeAgentInactive, err)
+		}
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return fail(delegation.CodeBudgetExceeded, errors.New("max duration exceeded"))
 		}
@@ -354,10 +364,15 @@ func (r *run) drive(ctx context.Context) (acpclient.PromptResult, *protocol.Usag
 		_ = cmd.Wait()
 	}()
 	var usage *protocol.Usage
+	wd := newWatchdog(r.job.InactivityTimeout, r.job.Control.Paused)
 	c := acpclient.New(stdout, stdin, acpclient.Options{
-		Root:       r.root,
-		OnUpdate:   func(_ string, u json.RawMessage) { r.onUpdate(u, &usage) },
-		Decide:     r.decide,
+		Root:     r.root,
+		OnUpdate: func(_ string, u json.RawMessage) { wd.touch(); r.onUpdate(u, &usage) },
+		Decide: func(dctx context.Context, req acpclient.PermissionRequest) (bool, error) {
+			wd.hold()
+			defer wd.release()
+			return r.decide(dctx, req)
+		},
 		CheckWrite: r.checkWrite,
 	})
 	ictx, cancel := context.WithTimeout(ctx, 90*time.Second)
@@ -381,8 +396,18 @@ func (r *run) drive(ctx context.Context) (acpclient.PromptResult, *protocol.Usag
 		case <-done:
 		}
 	}()
-	pr, err = c.Prompt(ctx, sid, r.promptText())
+	pctx, pcancel := context.WithCancel(ctx)
+	defer pcancel()
+	wd.touch()
+	idle := wd.start(pcancel)
+	pr, err = c.Prompt(pctx, sid, r.promptText())
 	close(done)
+	if idle() && ctx.Err() == nil {
+		_ = c.Cancel(sid)
+		ie := &InactiveError{After: r.job.InactivityTimeout, Detail: agentLastError(sid, stderr.String())}
+		r.phase("agent", "agent inactive: "+ie.Error())
+		return pr, usage, version, ie
+	}
 	if err != nil {
 		return pr, usage, version, err
 	}

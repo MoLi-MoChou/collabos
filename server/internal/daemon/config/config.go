@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Repo maps a project remote to a local checkout.
@@ -57,6 +58,22 @@ func TaskLimits() (cpu, memMB, procs int) {
 		return v
 	}
 	return n("COLLAB_TASK_CPU_SECONDS"), n("COLLAB_TASK_MEM_MB"), n("COLLAB_TASK_MAX_PROCS")
+}
+
+// AgentInactivityTimeout is how long a running agent may go without any
+// ACP traffic (outside human waits) before the task fails with
+// agent_inactive. COLLAB_AGENT_INACTIVITY_TIMEOUT, Go duration; default 10m,
+// "0" disables.
+func AgentInactivityTimeout() time.Duration {
+	v := os.Getenv("COLLAB_AGENT_INACTIVITY_TIMEOUT")
+	if v == "" {
+		return 10 * time.Minute
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d < 0 {
+		return 10 * time.Minute
+	}
+	return d
 }
 
 // Home returns the daemon home directory.

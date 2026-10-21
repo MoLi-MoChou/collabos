@@ -623,3 +623,26 @@ func TestProjectAccessTaintTokensIM(t *testing.T) {
 	}
 	mu.Unlock()
 }
+
+// An agent that goes silent (model error / rate limit) is failed by the
+// daemon's inactivity watchdog; the task records agent_inactive and the room
+// gets a notice carrying the surfaced error.
+func TestAgentInactiveFailsTaskWithReason(t *testing.T) {
+	w := setup(t, nil)
+	a := w.delegate(t, "idle", nil)
+	w.fake.wait(t, protocol.TypeDelegationDispatch, forTask(a.ID))
+	w.frame(t, protocol.TypeDaemonTaskCompleted, protocol.DaemonTaskCompleted{TaskID: a.ID, Outcome: protocol.OutcomeFailed, ReasonCode: "agent_inactive", Error: "agent produced no output for 10m0s: Rate limit exceeded"})
+	got := w.task(t, a.ID)
+	if got.Status != "failed" || got.ReasonCode != "agent_inactive" {
+		t.Fatalf("task: %s %s", got.Status, got.ReasonCode)
+	}
+	found := false
+	for _, c := range w.cards(t, "notice") {
+		if c["code"] == "agent_inactive" && c["task_id"] == a.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("no agent_inactive notice card")
+	}
+}

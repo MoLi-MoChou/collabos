@@ -276,7 +276,8 @@
     "memory_tainted": "Project memory marked tainted",
     "merged_on_platform": "Merged on the platform",
     "pr_closed_on_platform": "PR closed on the platform",
-    "autonomy_supervised": "Supervised mode needs approval"
+    "autonomy_supervised": "Supervised mode needs approval",
+    "agent_inactive": "Agent went silent (model error or rate limit); task timed out"
   },
   "pr": {
     "open": "Open",

@@ -460,7 +460,7 @@ func (d *Daemon) startTask(ctx context.Context, t protocol.DelegationDispatch) {
 		_ = os.MkdirAll(scratch, 0o700)
 		res := runner.Run(tctx, runner.Job{
 			Task: t, RepoPath: repo, Sandbox: d.sandbox, Opencode: d.ocBin, WorkDir: scratch, Egress: d.egress(),
-			Control: ctl, Limits: limits(),
+			Control: ctl, Limits: limits(), InactivityTimeout: config.AgentInactivityTimeout(),
 			Hooks: runner.Hooks{
 				Progress: func(p protocol.DaemonProgress) { d.report(t.TaskID, protocol.TypeDaemonProgressStream, p) },
 				Blocked:  func(p protocol.PolicyBlocked) { d.report(t.TaskID, protocol.TypeDaemonPolicyBlocked, p) },

@@ -22,6 +22,9 @@ const (
 	CodeBudgetExceeded     = "budget_exceeded"
 	CodeDepthExceeded      = "depth_exceeded"
 	CodeDuplicate          = "duplicate"
+	// CodeAgentInactive: the agent produced no output within the inactivity
+	// timeout (typically a model error or rate limit).
+	CodeAgentInactive = "agent_inactive"
 )
 
 // Error carries a reason code.
