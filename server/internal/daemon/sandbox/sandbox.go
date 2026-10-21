@@ -8,6 +8,7 @@ package sandbox
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"runtime"
 
@@ -38,6 +39,16 @@ type Backend interface {
 
 // Detect returns the best backend for this OS.
 func Detect() Backend {
+	// COLLAB_SANDBOX forces a backend: "none" opts out (the daemon then only
+	// accepts its owner's own tasks); "bwrap"/"seatbelt" require that backend.
+	switch os.Getenv("COLLAB_SANDBOX") {
+	case "none":
+		return None{}
+	case "bwrap", "bubblewrap":
+		return Bubblewrap{}
+	case "seatbelt":
+		return Seatbelt{}
+	}
 	switch runtime.GOOS {
 	case "linux":
 		if b := (Bubblewrap{}); b.Available() {

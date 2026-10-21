@@ -16,7 +16,11 @@ var inFlight = []string{string(protocol.StatusWorking), string(protocol.StatusRu
 
 // DaemonConnected records capabilities, reconciles in-flight tasks and
 // redispatches queued ones. It returns the last acknowledged seq.
-func (s *Service) DaemonConnected(ctx context.Context, d db.Daemon, hs protocol.ClientHandshake) int64 {
+//
+// It returns the last acknowledged journal seq for the handshake ack, and a
+// function the caller must run after sending that ack: it delivers frames
+// (re-sent decisions, queued dispatches) that must not precede the ack.
+func (s *Service) DaemonConnected(ctx context.Context, d db.Daemon, hs protocol.ClientHandshake) (int64, func()) {
 	id := util.UUIDString(d.ID)
 	s.graceMu.Lock()
 	if t := s.grace[id]; t != nil {
@@ -39,6 +43,7 @@ func (s *Service) DaemonConnected(ctx context.Context, d db.Daemon, hs protocol.
 	for _, t := range hs.JournaledTasks {
 		journaled[t] = true
 	}
+	var resend []db.Task
 	tasks, _ := s.Q.ListTasksForDaemonByStatus(ctx, db.ListTasksForDaemonByStatusParams{DaemonID: d.ID, Statuses: inFlight})
 	for _, t := range tasks {
 		tid := util.UUIDString(t.ID)
@@ -48,7 +53,7 @@ func (s *Service) DaemonConnected(ctx context.Context, d db.Daemon, hs protocol.
 				_, _ = s.setStatus(ctx, t, protocol.StatusWorking, "")
 				s.appendEvent(ctx, t.ID, "reconnected", map[string]any{"daemon_id": id})
 			}
-			s.resendDecisions(ctx, t)
+			resend = append(resend, t)
 		case journaled[tid]:
 			// the replayed journal will deliver the outcome
 		case t.Status == string(protocol.StatusApproval):
@@ -58,16 +63,21 @@ func (s *Service) DaemonConnected(ctx context.Context, d db.Daemon, hs protocol.
 			s.appendEvent(ctx, t.ID, "daemon_lost", map[string]any{"daemon_id": id})
 		}
 	}
-	queued, _ := s.Q.ListTasksForDaemonByStatus(ctx, db.ListTasksForDaemonByStatusParams{DaemonID: d.ID, Statuses: []string{string(protocol.StatusQueued)}})
-	for _, t := range queued {
-		s.dispatch(ctx, t)
+	after := func() {
+		for _, t := range resend {
+			s.resendDecisions(ctx, t)
+		}
+		queued, _ := s.Q.ListTasksForDaemonByStatus(ctx, db.ListTasksForDaemonByStatusParams{DaemonID: d.ID, Statuses: []string{string(protocol.StatusQueued)}})
+		for _, t := range queued {
+			s.dispatch(ctx, t)
+		}
 	}
 	s.dock(d.WorkspaceID, "devices")
 	fresh, err := s.Q.GetDaemon(ctx, d.ID)
 	if err != nil {
-		return d.LastAckedSeq
+		return d.LastAckedSeq, after
 	}
-	return fresh.LastAckedSeq
+	return fresh.LastAckedSeq, after
 }
 
 // DaemonDisconnected moves working tasks to running_offline and starts the

@@ -487,12 +487,13 @@ func (h *Handler) daemonWS(w http.ResponseWriter, r *http.Request) {
 	}
 	id := d.ID
 	h.S.Daemons.Register(uuidStr(id), c)
-	last := h.S.DaemonConnected(ctx, d, hs)
+	last, after := h.S.DaemonConnected(ctx, d, hs)
 	c.Send(protocol.Msg(protocol.TypeServerHandshakeAck, protocol.ServerHandshakeAck{
 		SessionID: protocol.NewID(), HeartbeatInterval: int(h.S.Cfg.HeartbeatInterval.Seconds()),
 		ServerTime: time.Now().UTC().Format(time.RFC3339), DaemonID: uuidStr(id), LastAckedSeq: last,
 	}))
 	h.log.Info("daemon connected", "daemon", uuidStr(id), "last_acked_seq", last)
+	after()
 	defer func() {
 		if h.S.Daemons.Unregister(uuidStr(id), c) {
 			h.S.DaemonDisconnected(d)

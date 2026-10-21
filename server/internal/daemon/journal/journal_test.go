@@ -50,3 +50,18 @@ func TestJournalLifecycle(t *testing.T) {
 		t.Fatalf("seq after sync = %d", e.Seq)
 	}
 }
+
+func TestUnfinished(t *testing.T) {
+	j, err := Open(filepath.Join(t.TempDir(), "j.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer j.Close()
+	_, _ = j.Append("a", protocol.Msg("DAEMON_PROGRESS", map[string]any{}))
+	_, _ = j.Append("b", protocol.Msg("DAEMON_PROGRESS", map[string]any{}))
+	_, _ = j.Append("b", protocol.Msg("DAEMON_TASK_COMPLETED", map[string]any{}))
+	got, err := j.Unfinished("DAEMON_TASK_COMPLETED")
+	if err != nil || len(got) != 1 || got[0] != "a" {
+		t.Fatalf("got %v %v", got, err)
+	}
+}

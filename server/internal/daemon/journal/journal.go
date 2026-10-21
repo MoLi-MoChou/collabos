@@ -130,3 +130,25 @@ func (j *Journal) Tasks() ([]string, error) {
 	}
 	return out, rows.Err()
 }
+
+// Unfinished lists tasks with unacknowledged frames but no completion frame:
+// after a daemon restart these runs are gone and must be reported as lost.
+func (j *Journal) Unfinished(completedType string) ([]string, error) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	rows, err := j.db.Query(`SELECT DISTINCT task_id FROM outbox o WHERE task_id <> ''
+		AND NOT EXISTS (SELECT 1 FROM outbox c WHERE c.task_id = o.task_id AND json_extract(c.frame, '$.type') = ?)`, completedType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}

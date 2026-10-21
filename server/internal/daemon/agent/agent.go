@@ -67,6 +67,19 @@ func New(cfg config.Config) (*Daemon, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Runs interrupted by a previous crash left frames without a completion:
+	// close them as lost so the server does not wait for an outcome forever.
+	lost, err := j.Unfinished(protocol.TypeDaemonTaskCompleted)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range lost {
+		if _, err := j.Append(id, protocol.Msg(protocol.TypeDaemonTaskCompleted, protocol.DaemonTaskCompleted{
+			TaskID: id, Outcome: protocol.OutcomeFailed, ReasonCode: "daemon_lost", Error: "daemon restarted while the task was running",
+		})); err != nil {
+			return nil, err
+		}
+	}
 	bin := cfg.OpencodeBin
 	if bin == "" {
 		bin = findOpencode()
