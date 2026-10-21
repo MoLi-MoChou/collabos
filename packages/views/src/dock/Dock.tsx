@@ -5,9 +5,10 @@ import { useUi } from "../hooks";
 import { TasksTab } from "./TasksTab";
 import { PeopleTab } from "./PeopleTab";
 import { MemoryTab } from "./MemoryTab";
+import { AuditTab } from "./AuditTab";
 
 function isTab(v: string): v is DockTab {
-  return v === "tasks" || v === "people" || v === "memory";
+  return v === "tasks" || v === "people" || v === "memory" || v === "audit";
 }
 
 export function Dock({ roomId }: { roomId: string }) {
@@ -19,12 +20,16 @@ export function Dock({ roomId }: { roomId: string }) {
         <TabsTrigger value="tasks" data-testid="tab-tasks">{t("dock.tasks")}</TabsTrigger>
         <TabsTrigger value="people" data-testid="tab-people">{t("dock.people")}</TabsTrigger>
         <TabsTrigger value="memory" data-testid="tab-memory">{t("dock.memory")}</TabsTrigger>
+        <TabsTrigger value="audit" data-testid="tab-audit">{t("dock.audit")}</TabsTrigger>
       </TabsList>
       <TabsContent value="tasks">
         <TasksTab />
       </TabsContent>
       <TabsContent value="people">
         <PeopleTab />
+      </TabsContent>
+      <TabsContent value="audit">
+        <AuditTab />
       </TabsContent>
       <TabsContent value="memory">
         <MemoryTab roomId={roomId} />

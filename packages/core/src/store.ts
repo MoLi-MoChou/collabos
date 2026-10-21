@@ -13,7 +13,7 @@ export const Session = z.object({
 });
 export type Session = z.infer<typeof Session>;
 
-export type DockTab = "tasks" | "people" | "memory";
+export type DockTab = "tasks" | "people" | "memory" | "audit";
 export type Theme = "light" | "dark";
 
 interface AppState {

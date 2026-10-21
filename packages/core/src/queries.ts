@@ -66,7 +66,7 @@ export function useMemory(projectId: string) {
 export function useAudit() {
   const api = useApi();
   const ws = useWs();
-  return useQuery({ queryKey: qk.audit(ws), queryFn: () => api.audit(), enabled: !!ws });
+  return useQuery({ queryKey: qk.audit(ws), queryFn: () => api.audit(), enabled: !!ws, refetchOnMount: "always", refetchInterval: 5000 });
 }
 
 /** Sends a chat message; client_msg_id makes retries idempotent. */

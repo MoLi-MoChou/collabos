@@ -26,6 +26,7 @@ export function TasksTab() {
               key={task.id}
               onClick={() => ui.actions.selectTask(task.id)}
               className="flex cursor-pointer flex-col gap-1 rounded-card border border-border bg-surface px-3 py-2 text-left hover:bg-surface-2"
+              data-task-id={task.id}
               data-testid="dock-task"
             >
               <div className="flex items-center gap-2">
@@ -88,6 +89,31 @@ function eventLine(e: TaskEvent, t: (k: string, o?: Record<string, unknown>) => 
   }
 }
 
+interface Line {
+  key: number;
+  time: string;
+  text: string;
+  tone: string;
+  stream: boolean;
+}
+
+/** Turns events into terminal lines, joining streamed agent message chunks. */
+function coalesce(events: TaskEvent[], t: (k: string, o?: Record<string, unknown>) => string): Line[] {
+  const out: Line[] = [];
+  for (const e of events) {
+    const l = eventLine(e, t);
+    if (!l) continue;
+    const stream = e.type === "progress" && e.payload.kind === "log" && e.payload.phase === "message";
+    const prev = out[out.length - 1];
+    if (stream && prev?.stream) {
+      prev.text += l.text;
+      continue;
+    }
+    out.push({ key: e.seq, time: new Date(e.created_at).toLocaleTimeString(), text: l.text, tone: l.tone, stream });
+  }
+  return out;
+}
+
 function TaskDetail({ task, onBack }: { task: Task; onBack: () => void }) {
   const { t } = useTranslation();
   const ev = useTaskEvents(task.id);
@@ -96,7 +122,9 @@ function TaskDetail({ task, onBack }: { task: Task; onBack: () => void }) {
   const cancel = useCancelTask();
   const end = useRef<HTMLDivElement>(null);
   const n = ev.data?.length ?? 0;
-  useEffect(() => end.current?.scrollIntoView({ block: "end" }), [n]);
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: "end" });
+  }, [n]);
   const agent = dir.agent(task.target_agent_id);
   const canCancel = !isTerminal(task.status) && (task.created_by === me || task.target_owner_id === me);
   return (
@@ -139,16 +167,12 @@ function TaskDetail({ task, onBack }: { task: Task; onBack: () => void }) {
         )}
       </dl>
       <div className="min-h-0 flex-1 overflow-y-auto rounded-card bg-term-bg p-3 font-mono text-mono" data-testid="terminal">
-        {(ev.data ?? []).map((e) => {
-          const l = eventLine(e, t);
-          if (!l) return null;
-          return (
-            <div key={e.seq} className={"whitespace-pre-wrap break-words " + l.tone}>
-              <span className="text-term-muted">{new Date(e.created_at).toLocaleTimeString()} </span>
-              {l.text}
-            </div>
-          );
-        })}
+        {coalesce(ev.data ?? [], t).map((l) => (
+          <div key={l.key} className={"whitespace-pre-wrap break-words " + l.tone}>
+            <span className="text-term-muted">{l.time} </span>
+            {l.text}
+          </div>
+        ))}
         <div ref={end} />
       </div>
     </div>

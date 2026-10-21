@@ -39,7 +39,7 @@ export function AppShell() {
           <Dock roomId={roomId} />
         </aside>
       )}
-      {!ui.connected && <div className="fixed bottom-3 left-1/2 -translate-x-1/2 rounded-pill bg-warn-soft px-3 py-1 text-caption text-warn">{t("shell.reconnecting")}</div>}
+      {!ui.connected && <div data-testid="reconnecting" className="fixed bottom-3 left-1/2 -translate-x-1/2 rounded-pill bg-warn-soft px-3 py-1 text-caption text-warn">{t("shell.reconnecting")}</div>}
     </div>
   );
 }
@@ -84,7 +84,7 @@ function Rail({ activeRoom }: { activeRoom: string | null }) {
         ))}
       </div>
       <div className="flex-1" />
-      <div className="m-2 rounded-card border border-border bg-surface p-3" data-testid="device-status">
+      <div className="m-2 rounded-card border border-border bg-surface p-3" data-testid="device-status" data-status={online.length ? "online" : "offline"}>
         <div className="flex items-center gap-2 text-body font-medium">
           <Dot tone={online.length ? "success" : "neutral"} />
           {online.length ? t("shell.deviceOnline") : t("shell.deviceOffline")}

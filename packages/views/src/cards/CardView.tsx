@@ -73,6 +73,7 @@ function TaskLine({ taskId, fallback }: { taskId: string; fallback: string }) {
       className="flex w-full cursor-pointer items-center gap-2 rounded-card border border-border bg-surface px-3 py-2 text-left shadow-card hover:bg-surface-2"
       onClick={() => ui.actions.selectTask(taskId)}
       data-testid="task-line"
+      data-task-id={taskId}
     >
       {task && <StatusBadge status={task.status} />}
       <span className="min-w-0 flex-1 truncate text-body">{task ? task.title : fallback}</span>
@@ -122,7 +123,7 @@ function DraftView({ card, messageId }: { card: DraftCard; messageId: string }) 
     confirm.mutate({ messageId, draft: d });
   };
   return (
-    <Card data-testid="draft-card" data-state={card.state}>
+    <Card data-testid="draft-card" data-state={card.state} data-task-id={card.task_id}>
       <CardHeader>
         <Badge tone="accent">{t("card.draft.badge")}</Badge>
         <span className="text-body font-medium">{t("card.draft.to", { handle: card.target_handle, owner: dir.ownerName(target) })}</span>
@@ -203,7 +204,7 @@ function IntakeView({ card }: { card: IntakeCard }) {
   const task = useTask(card.task_id);
   const owner = card.owner_id === me;
   return (
-    <Card data-testid="intake-card" data-state={card.state}>
+    <Card data-testid="intake-card" data-state={card.state} data-task-id={card.task_id}>
       <CardHeader className={card.state === "pending" ? "bg-warn-soft rounded-t-card" : ""}>
         <Badge tone={card.state === "pending" ? "warn" : card.state === "accepted" ? "success" : "danger"}>{t(`card.intake.${card.state}`)}</Badge>
         <span className="text-body">{t("card.intake.from", { requester: dir.userName(card.requester_id), handle: card.agent_handle })}</span>
@@ -245,7 +246,7 @@ function PermissionView({ card }: { card: PermissionCard }) {
   const decide = useDecidePermission();
   const eligible = card.eligible.includes(me);
   return (
-    <Card data-testid="permission-card" data-state={card.state} className={card.state === "pending" ? "border-warn" : ""}>
+    <Card data-testid="permission-card" data-state={card.state} data-task-id={card.task_id} data-permission-id={card.permission_id} className={card.state === "pending" ? "border-warn" : ""}>
       <CardHeader className={card.state === "pending" ? "bg-warn-soft rounded-t-card" : ""}>
         <Badge tone={card.state === "pending" ? "warn" : card.state === "approved" ? "success" : "danger"}>{t(`card.permission.${card.state}`)}</Badge>
         <span className="flex-1" />
@@ -292,7 +293,7 @@ function MergeView({ card }: { card: MergeCard }) {
   const open = card.state === "pending";
   const tone = card.state === "merged" ? "success" : card.state === "pending" || card.state === "merging" ? "accent" : "danger";
   return (
-    <Card data-testid="merge-card" data-state={card.state}>
+    <Card data-testid="merge-card" data-state={card.state} data-task-id={card.task_id} data-approval-id={card.approval_id}>
       <CardHeader>
         <Badge tone={tone}>{t(`card.merge.${card.state}`)}</Badge>
         <span className="text-body font-medium">{t("card.merge.pr", { number: card.number })}</span>
@@ -340,7 +341,7 @@ function MemoryView({ card }: { card: MemoryCard }) {
   const decide = useDecideMemory();
   const lead = card.lead_id === me;
   return (
-    <Card data-testid="memory-card" data-state={card.state}>
+    <Card data-testid="memory-card" data-state={card.state} data-task-id={card.task_id} data-memory-id={card.memory_id}>
       <CardHeader>
         <Badge tone={card.state === "pending" ? "warn" : card.state === "confirmed" ? "success" : "danger"}>{t(`card.memory.${card.state}`)}</Badge>
         <span className="text-body font-medium">{t("card.memory.title", { version: card.version })}</span>
@@ -376,6 +377,7 @@ function NoticeView({ card, body }: { card: NoticeCard; body: string }) {
       className={"flex items-center gap-2 rounded-card border px-3 py-2 text-body " + (danger ? "border-danger bg-danger-soft text-danger" : "border-border bg-surface text-fg-muted")}
       data-testid="notice"
       data-code={card.code}
+      data-task-id={card.task_id}
     >
       <span className="font-medium">{t(`reason.${card.code}`, { defaultValue: card.code })}</span>
       <span className="truncate text-fg-muted">{body}</span>
