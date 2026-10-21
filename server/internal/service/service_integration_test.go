@@ -175,7 +175,10 @@ func TestDelegationFlowAuthorization(t *testing.T) {
 	if _, err := s.DecideIntake(ctx, ws, a.UserID, t1.ID, IntakeDecision{Decision: "accept"}); code(err) != "delegation.unauthorized" {
 		t.Fatalf("requester must not decide intake: %v", err)
 	}
-	tr, err := s.DecideIntake(ctx, ws, b.UserID, t1.ID, IntakeDecision{Decision: "reject"})
+	if _, err := s.DecideIntake(ctx, ws, b.UserID, t1.ID, IntakeDecision{Decision: "reject"}); code(err) != "common.reason_required" {
+		t.Fatalf("reject without a reason must fail: %v", err)
+	}
+	tr, err := s.DecideIntake(ctx, ws, b.UserID, t1.ID, IntakeDecision{Decision: "reject", Comment: "busy"})
 	if err != nil || tr.Status != "rejected" || tr.ReasonCode != "intake_denied" {
 		t.Fatalf("reject: %+v %v", tr, err)
 	}
