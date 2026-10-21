@@ -1,0 +1,5 @@
+@import "@collabos/ui/styles.css";
+@source "../../../packages/views/src";
+@source "../../../packages/ui/src";
+
+html, body, #root { height: 100%; }
