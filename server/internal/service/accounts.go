@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"regexp"
@@ -34,6 +35,7 @@ type LoginInput struct {
 	Name       string `json:"name"`
 	Handle     string `json:"handle"`
 	InviteCode string `json:"invite_code"`
+	Password   string `json:"password"`
 }
 
 // LoginResult is returned by DevLogin.
@@ -53,9 +55,20 @@ func (s *Service) DevLogin(ctx context.Context, in LoginInput) (LoginResult, err
 	if !s.Cfg.DevLogin {
 		return LoginResult{}, apperr.ErrDevLoginOff
 	}
+	if s.Cfg.DevLoginPassword != "" && subtle.ConstantTimeCompare([]byte(in.Password), []byte(s.Cfg.DevLoginPassword)) != 1 {
+		return LoginResult{}, apperr.ErrBadPassword
+	}
 	in.Email = strings.TrimSpace(strings.ToLower(in.Email))
 	if in.Email == "" || !strings.Contains(in.Email, "@") {
 		return LoginResult{}, apperr.BadRequest("a valid email is required")
+	}
+	if s.Cfg.DevLoginExistingOnly {
+		ex, err := s.Q.GetUserByEmail(ctx, in.Email)
+		if err != nil {
+			return LoginResult{}, apperr.ErrUnknownAccount
+		}
+		// Existing-only mode never lets a login rename an account or join other workspaces.
+		in.Name, in.Handle, in.InviteCode = ex.Name, ex.Handle, ""
 	}
 	if in.Name == "" {
 		in.Name = strings.Split(in.Email, "@")[0]

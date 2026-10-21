@@ -57,6 +57,7 @@ func (h *Handler) Router() http.Handler {
 	r.Use(middleware.RequestID, middleware.RealIP, middleware.Recoverer, h.cors)
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]string{"status": "ok"}) })
 	r.Post("/api/auth/dev-login", h.devLogin)
+	r.Get("/api/config", h.publicConfig)
 	r.Get("/ws", h.uiWS)
 	r.Get("/daemon/ws", h.daemonWS)
 	r.Group(func(r chi.Router) {
@@ -203,6 +204,10 @@ func (h *Handler) devLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := h.S.DevLogin(r.Context(), in)
 	respond(w, res, err)
+}
+
+func (h *Handler) publicConfig(w http.ResponseWriter, _ *http.Request) {
+	respond(w, map[string]bool{"password_required": h.S.Cfg.DevLoginPassword != "", "dev_login": h.S.Cfg.DevLogin}, nil)
 }
 
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) {

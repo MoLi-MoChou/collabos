@@ -15,3 +15,6 @@ WHERE t.token_hash = $1 AND t.expires_at > now();
 
 -- name: GetUserByHandle :one
 SELECT * FROM users WHERE handle = $1;
+
+-- name: GetUserByEmail :one
+SELECT * FROM users WHERE email = $1;
