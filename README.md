@@ -95,6 +95,11 @@ pnpm e2e                                         # 需要 Postgres、opencode、
 | `COLLAB_SANDBOX`（设备） | 自动 | `none` / `bwrap` / `seatbelt` 强制选择 |
 | `COLLAB_EGRESS`（设备） | 开 | `off` 关闭出站白名单（沙箱共享主机网络） |
 | `COLLAB_EGRESS_ALLOW`（设备） | — | 追加允许的域名，逗号分隔，支持 `*.example.com` |
+| `COLLAB_DECISION_TIMEOUT` | `24h` | 权限/合并审批超时：到期后任务**保持暂停**并提醒，绝不自动批准 |
+| `COLLAB_SWEEP_INTERVAL` | `30s` | 超时扫描间隔（接单超时、审批超时） |
+| `COLLAB_ACCESS_TOKEN_TTL` | `12h` | 访问令牌有效期（刷新令牌 30 天，轮换） |
+| `COLLAB_IM_ALLOW_HOSTS` | Slack/飞书/Lark/钉钉 webhook 主机 | 外部 IM 出站通知允许的主机 |
+| `COLLAB_TASK_CPU_SECONDS` / `COLLAB_TASK_MEM_MB` / `COLLAB_TASK_MAX_PROCS`（设备） | 不限 | 单任务资源上限（prlimit） |
 
 ## 安全模型（摘要）
 
@@ -107,4 +112,7 @@ pnpm e2e                                         # 需要 Postgres、opencode、
   追加白名单：`daemon.json` 的 `egress_allow` 或 `COLLAB_EGRESS_ALLOW=a.com,*.b.com`；关闭：`COLLAB_EGRESS=off`。
   只拦截走 HTTP(S) 代理的流量之外的一切直连（直连在独立网络命名空间里无路由）。
 - 合并：服务器只验证；由具名审批人自己的在线设备执行 `fetch → 校验分支头 == 已批准提交 → merge --no-ff → push`。
-- 详见 `docs/collabos-prd-v0.4.md`、`docs/verification.md`。
+- 不可信内容：Bot 富消息（OpenUI 白名单组件）与其交互只作为用户输入回流，不能触发平台操作；Agent 提出的子委托默认只生成给其 owner 的草稿；
+  MEMORY.md 可标记污染，污染版本不再进入上下文，引用它的任务被标记。
+- 预算：委托/个人/团队三级，90% 提醒、100% 暂停（daemon 端 SIGSTOP）等待扩容。
+- 详见 `docs/collabos-prd-v0.4.md`、`docs/prd-coverage.md`（逐条覆盖表）、`docs/api.md`（开放 API/SDK）、`docs/verification.md`。
