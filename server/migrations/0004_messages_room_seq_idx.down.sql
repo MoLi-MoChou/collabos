@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS messages_room_seq_idx;

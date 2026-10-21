@@ -1,0 +1,1 @@
+DROP INDEX CONCURRENTLY IF EXISTS agents_daemon_idx;

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.turbo/
+*.log
+/server/bin/
+.env
+.env.local
+coverage/
+test-results/
+playwright-report/
+.collabos/
+/e2e/.run/
