@@ -1,1 +1,863 @@
 openapi: 3.1.0
+info:
+  title: CollabOS API
+  version: "0.4.0"
+  description: |
+    Open API for CollabOS (PRD V0.4 §open API). Authenticate with an access token
+    from /api/auth/dev-login (rotated via /api/auth/refresh) or a personal API token
+    (coa_…) created at POST /api/tokens. Workspace-scoped routes need the X-Workspace-ID header.
+    Every route is also served under /api/v1. Errors are {"error":{"code","message"}}.
+servers:
+  - url: /api
+  - url: /api/v1
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+  parameters:
+    Workspace:
+      name: X-Workspace-ID
+      in: header
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: {type: string}
+            message: {type: string}
+  responses:
+    Error:
+      description: Error envelope
+      content:
+        application/json:
+          schema: {$ref: "#/components/schemas/Error"}
+security:
+  - bearer: []
+paths:
+  /api/agents:
+    get:
+      operationId: listAgents
+      tags: [agents]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/agents/{id}/intake:
+    patch:
+      operationId: updateIntake
+      tags: [agents]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/agents/{id}/patrol:
+    post:
+      operationId: patrol
+      tags: [agents]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/agents/{id}/policy:
+    patch:
+      operationId: agentPolicy
+      tags: [agents]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/approvals/{id}/decide:
+    post:
+      operationId: decideMerge
+      tags: [approvals]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/audit:
+    get:
+      operationId: listAudit
+      tags: [audit]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/auth/dev-login:
+    post:
+      operationId: devLogin
+      tags: [auth]
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/auth/refresh:
+    post:
+      operationId: refresh
+      tags: [auth]
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/budgets:
+    put:
+      operationId: setBudget
+      tags: [budgets]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/config:
+    get:
+      operationId: publicConfig
+      tags: [config]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/daemons:
+    get:
+      operationId: listDaemons
+      tags: [daemons]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: pair
+      tags: [daemons]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/daemons/{id}:
+    delete:
+      operationId: revokeDaemon
+      tags: [daemons]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/daemons/{id}/agents:
+    post:
+      operationId: addAgent
+      tags: [daemons]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/me:
+    get:
+      operationId: me
+      tags: [me]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/memory/{id}/decide:
+    post:
+      operationId: decideMemory
+      tags: [memory]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/memory/{id}/references:
+    get:
+      operationId: memoryRefs
+      tags: [memory]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/memory/{id}/taint:
+    post:
+      operationId: taintMemory
+      tags: [memory]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/messages/{id}/actions:
+    post:
+      operationId: richAction
+      tags: [messages]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/messages/{id}/confirm-draft:
+    post:
+      operationId: confirmDraft
+      tags: [messages]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/messages/{id}/discard-draft:
+    post:
+      operationId: discardDraft
+      tags: [messages]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/messages/{id}/to-task:
+    post:
+      operationId: postToTask
+      tags: [messages]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/openapi.yaml:
+    get:
+      operationId: openapi
+      tags: [openapi.yaml]
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/permissions/{id}/decide:
+    post:
+      operationId: decidePermission
+      tags: [permissions]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: createProject
+      tags: [projects]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/projects/{id}/members:
+    get:
+      operationId: listProjectMembers
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: setProjectMember
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/projects/{id}/members/{uid}:
+    delete:
+      operationId: removeProjectMember
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: uid, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/projects/{id}/memory:
+    get:
+      operationId: listMemory
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: editMemory
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/projects/{id}/settings:
+    patch:
+      operationId: projectSettings
+      tags: [projects]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/pull-requests:
+    get:
+      operationId: listPRs
+      tags: [pull-requests]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/rooms/{id}/messages:
+    get:
+      operationId: listMessages
+      tags: [rooms]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: sendMessage
+      tags: [rooms]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: createDelegation
+      tags: [tasks]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}:
+    get:
+      operationId: getTask
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}/budget:
+    post:
+      operationId: expandBudget
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}/cancel:
+    post:
+      operationId: cancelTask
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}/events:
+    get:
+      operationId: listEvents
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}/intake:
+    post:
+      operationId: decideIntake
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tasks/{id}/nudge:
+    post:
+      operationId: nudge
+      tags: [tasks]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tokens:
+    get:
+      operationId: listTokens
+      tags: [tokens]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+    post:
+      operationId: createToken
+      tags: [tokens]
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/tokens/{id}:
+    delete:
+      operationId: revokeToken
+      tags: [tokens]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/traces/{id}:
+    get:
+      operationId: trace
+      tags: [traces]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/usage:
+    get:
+      operationId: usage
+      tags: [usage]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/webhooks/github/{id}:
+    post:
+      operationId: githubWebhook
+      tags: [webhooks]
+      security: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
+  /api/workspace/im:
+    patch:
+      operationId: setIM
+      tags: [workspace]
+      parameters:
+        - $ref: "#/components/parameters/Workspace"
+      requestBody:
+        content:
+          application/json:
+            schema: {type: object}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: {type: object}
+        default: {$ref: "#/components/responses/Error"}
