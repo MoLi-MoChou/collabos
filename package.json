@@ -9,7 +9,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "e2e": "pnpm --filter @collabos/e2e test",
+    "e2e": "pnpm --filter @collabos/e2e e2e",
     "gen:protocol": "cd server && ~/go/bin/tygo generate || tygo generate"
   },
   "devDependencies": {
