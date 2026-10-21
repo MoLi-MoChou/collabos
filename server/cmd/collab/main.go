@@ -54,6 +54,8 @@ func main() {
 		err = status()
 	case "run":
 		err = run()
+	case "netbridge":
+		err = netbridge(os.Args[2:])
 	case "help", "-h", "--help":
 		usage()
 	default:

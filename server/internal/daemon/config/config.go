@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Repo maps a project remote to a local checkout.
@@ -23,6 +24,28 @@ type Config struct {
 	Repos     []Repo `json:"repos"`
 	// OpencodeBin overrides the opencode binary path.
 	OpencodeBin string `json:"opencode_bin,omitempty"`
+	// EgressAllow adds hosts the sandboxed agent may reach (see Egress()).
+	EgressAllow []string `json:"egress_allow,omitempty"`
+	// EgressOff disables the egress gate: the sandbox shares the host network.
+	EgressOff bool `json:"egress_off,omitempty"`
+}
+
+// DefaultEgressAllow are the model API hosts opencode needs by default.
+var DefaultEgressAllow = []string{"opencode.ai", "*.opencode.ai", "models.dev"}
+
+// Egress returns whether the gate is on and the effective allowlist.
+// COLLAB_EGRESS=off disables it; COLLAB_EGRESS_ALLOW (comma separated) adds hosts.
+func (c Config) Egress() (bool, []string) {
+	if c.EgressOff || os.Getenv("COLLAB_EGRESS") == "off" {
+		return false, nil
+	}
+	allow := append(append([]string{}, DefaultEgressAllow...), c.EgressAllow...)
+	for _, h := range strings.Split(os.Getenv("COLLAB_EGRESS_ALLOW"), ",") {
+		if h = strings.TrimSpace(h); h != "" {
+			allow = append(allow, h)
+		}
+	}
+	return true, allow
 }
 
 // Home returns the daemon home directory.

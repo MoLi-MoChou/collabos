@@ -38,4 +38,5 @@
 
 - **macOS Seatbelt 沙箱**：SBPL 配置文件已实现并有单元测试（生成内容），但未在 macOS 上实际运行。
 - **Windows**：守护进程可编译（进程组处理有 Windows 实现），但没有 OS 沙箱，未在 Windows 上运行；无沙箱设备只能接自己的任务。
-- 沙箱**不隔离网络**（模型 API 需要），这是已知限制。
+- 出站白名单已在 Linux 上实测：`cmd/collab/netbridge_test.go` 在真实 bwrap 中验证允许域名可达、非白名单返回 403、直连失败；E2E 中 opencode 经代理访问 `opencode.ai` / `models.opencode.ai` 完成任务。
+- **macOS**：Seatbelt 下暂不做出站白名单（沙箱共享网络），未运行时验证。

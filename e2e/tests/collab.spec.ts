@@ -90,6 +90,9 @@ test("跨所有者委托：接单 → 越权授权卡 → 非审批人被拒 →
 
   const term = await openTask(zs.page, id);
   await expect(term.getByTestId("terminal")).toContainText(/PR|merged|已合并/);
+  // The sandbox had no network of its own; the model API went through the egress allowlist.
+  await expect(term.getByTestId("terminal")).toContainText("sandbox network isolated");
+  await expect(term.getByTestId("terminal")).toContainText(/network allowed: (models\.)?opencode\.ai/);
   await shot(zs.page, "09-task-detail-terminal");
 
   const mem = card(zs.page, "memory", id);

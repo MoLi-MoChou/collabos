@@ -93,11 +93,18 @@ pnpm e2e                                         # 需要 Postgres、opencode、
 | `COLLAB_DEFAULT_MODEL` | `opencode/deepseek-v4.1-flash-free` | opencode 模型 |
 | `COLLAB_HOME`（设备） | `~/.collabos` | 守护进程配置与日志目录 |
 | `COLLAB_SANDBOX`（设备） | 自动 | `none` / `bwrap` / `seatbelt` 强制选择 |
+| `COLLAB_EGRESS`（设备） | 开 | `off` 关闭出站白名单（沙箱共享主机网络） |
+| `COLLAB_EGRESS_ALLOW`（设备） | — | 追加允许的域名，逗号分隔，支持 `*.example.com` |
 
 ## 安全模型（摘要）
 
 - 第一层（守护进程策略）：授权 glob + 动作；工作树之外/黑名单命令直接拒绝；越权升级为人工授权卡；运行结束后回滚授权外的改动。
 - 第二层（OS 沙箱）：Linux bwrap（根只读、$HOME/仓库 tmpfs 遮蔽、仅 worktree 可写、pid/ipc/uts 隔离）；macOS Seatbelt。
-  **网络未隔离**（模型 API 需要）。无沙箱的设备不接受跨所有者任务（`sandbox_unavailable`）。
+  无沙箱的设备不接受跨所有者任务（`sandbox_unavailable`）。
+- 出站网络（Linux）：bwrap 使用 `--unshare-net`，沙箱内只有回环网络。`collab netbridge` 在沙箱内把 `127.0.0.1:18080`
+  转发到守护进程的出站代理（unix socket），并为 Agent 设置 `HTTP(S)_PROXY`。代理只放行白名单域名：
+  默认 `opencode.ai`、`*.opencode.ai`、`models.dev` 以及项目 Git 远端的主机；其余返回 403，并记为 `sandbox_denied`（层级 `sandbox`）。
+  追加白名单：`daemon.json` 的 `egress_allow` 或 `COLLAB_EGRESS_ALLOW=a.com,*.b.com`；关闭：`COLLAB_EGRESS=off`。
+  只拦截走 HTTP(S) 代理的流量之外的一切直连（直连在独立网络命名空间里无路由）。
 - 合并：服务器只验证；由具名审批人自己的在线设备执行 `fetch → 校验分支头 == 已批准提交 → merge --no-ff → push`。
 - 详见 `docs/collabos-prd-v0.4.md`、`docs/verification.md`。

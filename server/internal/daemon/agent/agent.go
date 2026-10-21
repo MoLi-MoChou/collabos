@@ -384,7 +384,7 @@ func (d *Daemon) startTask(ctx context.Context, t protocol.DelegationDispatch) {
 		scratch := filepath.Join(config.Home(), "scratch")
 		_ = os.MkdirAll(scratch, 0o700)
 		res := runner.Run(tctx, runner.Job{
-			Task: t, RepoPath: repo, Sandbox: d.sandbox, Opencode: d.ocBin, WorkDir: scratch,
+			Task: t, RepoPath: repo, Sandbox: d.sandbox, Opencode: d.ocBin, WorkDir: scratch, Egress: d.egress(),
 			Hooks: runner.Hooks{
 				Progress: func(p protocol.DaemonProgress) { d.report(t.TaskID, protocol.TypeDaemonProgressStream, p) },
 				Blocked:  func(p protocol.PolicyBlocked) { d.report(t.TaskID, protocol.TypeDaemonPolicyBlocked, p) },
@@ -464,4 +464,10 @@ func githubMerge(ctx context.Context, repo string, m protocol.MergeExecute) prot
 	}
 	res.OK = true
 	return res
+}
+
+func (d *Daemon) egress() runner.Egress {
+	on, allow := d.cfg.Egress()
+	self, _ := os.Executable()
+	return runner.Egress{Enabled: on, Allow: allow, Bridge: self}
 }

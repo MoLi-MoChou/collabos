@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 
 	"github.com/collabos/collabos/server/internal/approval"
 	"github.com/collabos/collabos/server/internal/daemon/acpclient"
+	"github.com/collabos/collabos/server/internal/daemon/egress"
 	"github.com/collabos/collabos/server/internal/daemon/sandbox"
 	"github.com/collabos/collabos/server/internal/daemon/worktree"
 	"github.com/collabos/collabos/server/internal/delegation"
@@ -40,7 +42,23 @@ type Job struct {
 	Opencode string
 	WorkDir  string // scratch dir for chat runs
 	Hooks    Hooks
+	// Egress, when enabled with a bubblewrap sandbox, cuts the sandbox off the
+	// network and routes the agent's HTTP(S) through an allowlisting proxy.
+	Egress Egress
 }
+
+// Egress configures the per-run network gate.
+type Egress struct {
+	Enabled bool
+	// Allow lists permitted hosts; the project's Git remote host is added.
+	Allow []string
+	// Bridge is the collab binary that relays TCP to the proxy socket
+	// inside the sandbox (`collab netbridge`).
+	Bridge string
+}
+
+// bridgePort is the loopback port the in-sandbox bridge listens on.
+const bridgePort = "18080"
 
 // Run executes the job and returns the completion report.
 func Run(ctx context.Context, j Job) protocol.DaemonTaskCompleted {
@@ -189,9 +207,57 @@ func (r *run) spec() sandbox.Spec {
 	}
 }
 
+// startEgress starts the allowlisting proxy on a unix socket and rewrites the
+// spec so the agent runs without its own network behind the bridge.
+func (r *run) startEgress(spec *sandbox.Spec) (func(), error) {
+	e := r.job.Egress
+	if !e.Enabled || r.job.Sandbox.Name() != protocol.SandboxBubblewrap || e.Bridge == "" {
+		return func() {}, nil
+	}
+	dir, err := os.MkdirTemp("", "collab-egress-")
+	if err != nil {
+		return nil, err
+	}
+	sock := filepath.Join(dir, "proxy.sock")
+	l, err := net.Listen("unix", sock)
+	if err != nil {
+		_ = os.RemoveAll(dir)
+		return nil, err
+	}
+	allow := append(egress.Allowlist{}, e.Allow...)
+	if h := egress.HostOf(r.job.Task.RemoteURL); h != "" {
+		allow = append(allow, h)
+	}
+	p := &egress.Proxy{Allow: allow, OnEvent: func(d egress.Decision) {
+		if d.Allowed {
+			r.phase("egress", "network allowed: "+d.Host+":"+d.Port)
+			return
+		}
+		r.phase("egress", "network blocked: "+d.Host+":"+d.Port)
+		if r.job.Hooks.Blocked != nil {
+			r.job.Hooks.Blocked(protocol.PolicyBlocked{TaskID: r.job.Task.TaskID, Code: delegation.CodeSandboxDenied, Layer: "sandbox", Target: "network " + d.Host})
+		}
+	}}
+	go func() { _ = p.Serve(l) }()
+	proxy := "http://127.0.0.1:" + bridgePort
+	spec.Network = false
+	spec.Writable = append(spec.Writable, dir)
+	spec.Argv = append([]string{e.Bridge, "netbridge", "--unix", sock, "--listen", "127.0.0.1:" + bridgePort, "--"}, spec.Argv...)
+	spec.Env = append(spec.Env, "HTTP_PROXY="+proxy, "HTTPS_PROXY="+proxy, "http_proxy="+proxy, "https_proxy="+proxy,
+		"ALL_PROXY="+proxy, "NO_PROXY=localhost,127.0.0.1", "no_proxy=localhost,127.0.0.1")
+	r.phase("egress", "sandbox network isolated; allowed hosts: "+strings.Join(allow, ", "))
+	return func() { _ = l.Close(); _ = os.RemoveAll(dir) }, nil
+}
+
 func (r *run) drive(ctx context.Context) (acpclient.PromptResult, *protocol.Usage, int, error) {
 	var pr acpclient.PromptResult
-	cmd, err := r.job.Sandbox.Command(ctx, r.spec())
+	spec := r.spec()
+	stopEgress, err := r.startEgress(&spec)
+	if err != nil {
+		return pr, nil, 0, err
+	}
+	defer stopEgress()
+	cmd, err := r.job.Sandbox.Command(ctx, spec)
 	if err != nil {
 		return pr, nil, 0, err
 	}
