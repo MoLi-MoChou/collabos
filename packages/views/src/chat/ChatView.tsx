@@ -9,6 +9,9 @@ import { CardView } from "../cards/CardView";
 import { RichMessage } from "../rich/RichMessage";
 import { Fenced } from "./Fenced";
 
+const WINDOW = 150;
+const ROW_STYLE = { contentVisibility: "auto", containIntrinsicSize: "auto 80px" } as const;
+
 export function ChatView({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
   const rooms = useRooms();
@@ -17,6 +20,10 @@ export function ChatView({ roomId }: { roomId: string }) {
   const room = rooms.data?.find((r) => r.id === roomId);
   const end = useRef<HTMLDivElement>(null);
   const count = msgs.data?.length ?? 0;
+  // FR-CLI-101: only the newest `windowSize` rows are mounted; older ones load on demand,
+  // and off-screen rows skip layout/paint via content-visibility.
+  const [windowSize, setWindowSize] = useState(WINDOW);
+  const visible = (msgs.data ?? []).slice(-windowSize);
   useEffect(() => {
     end.current?.scrollIntoView({ block: "end" });
   }, [count]);
@@ -42,8 +49,15 @@ export function ChatView({ roomId }: { roomId: string }) {
       <div className="min-h-0 flex-1 overflow-y-auto" data-testid="messages">
         <div className="mx-auto flex max-w-215 flex-col gap-3 px-6 pt-2 pb-6">
           {count === 0 && !msgs.isLoading && <div className="py-10 text-center text-body text-fg-subtle">{t("chat.empty")}</div>}
-          {(msgs.data ?? []).map((m) => (
-            <MessageRow key={m.id} m={m} />
+          {count > windowSize && (
+            <button className="mx-auto cursor-pointer rounded-pill px-3 py-1 text-caption text-accent hover:bg-hover" onClick={() => setWindowSize(windowSize + WINDOW)} data-testid="load-earlier">
+              {t("chat.earlier", { n: count - windowSize })}
+            </button>
+          )}
+          {visible.map((m) => (
+            <div key={m.id} style={ROW_STYLE}>
+              <MessageRow m={m} />
+            </div>
           ))}
           <div ref={end} />
         </div>

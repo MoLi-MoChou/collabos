@@ -46,7 +46,8 @@
     "sending": "发送中…",
     "placeholder": "给 #{{room}} 发消息，输入 @ 提到成员或 Bot",
     "hint": "Enter 发送 · Shift+Enter 换行",
-    "send": "发送"
+    "send": "发送",
+    "earlier": "显示更早的 {{n}} 条消息"
   },
   "card": {
     "details": "详情",

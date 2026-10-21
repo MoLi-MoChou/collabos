@@ -75,3 +75,25 @@ describe("SDK", () => {
     expect(calls[0]).toEqual({ url: "https://x.test/api/usage", auth: "Bearer coa_abc" });
   });
 });
+
+import { QueryClient } from "@tanstack/react-query";
+import { attachSnapshotCache, snapshotOf, type SnapshotStore } from "./cache";
+
+describe("snapshot cache", () => {
+  it("only snapshots workspace data and trims messages", () => {
+    expect(snapshotOf(["me"], {})).toBeUndefined();
+    expect((snapshotOf(["ws", "w", "messages", "r"], Array.from({ length: 300 }, (_, i) => i)) as number[]).length).toBe(200);
+  });
+  it("persists and hydrates", async () => {
+    const m = new Map<string, unknown>();
+    const store: SnapshotStore = { get: async (k) => m.get(k), set: async (k, v) => void m.set(k, v) };
+    const a = new QueryClient();
+    const stop = await attachSnapshotCache(a, store, "w");
+    a.setQueryData(["ws", "w", "tasks"], [{ id: "t1" }]);
+    await new Promise((r) => setTimeout(r, 600));
+    stop();
+    const b = new QueryClient();
+    await attachSnapshotCache(b, store, "w");
+    expect(b.getQueryData(["ws", "w", "tasks"])).toEqual([{ id: "t1" }]);
+  });
+});

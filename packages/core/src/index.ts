@@ -13,4 +13,5 @@ export * from "./queries";
 export * from "./mentions";
 export * from "./status";
 export * from "./text";
+export { attachSnapshotCache, idbStore, snapshotOf, type SnapshotStore } from "./cache";
 export { initI18n } from "./i18n";

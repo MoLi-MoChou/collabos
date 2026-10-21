@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { createRootRoute, createRoute, createRouter, Outlet, RouterProvider, useNavigate, useParams } from "@tanstack/react-router";
 import { z } from "zod";
-import { ApiClient, applyEnvelope, createAppStore, CoreProvider, initI18n, RealtimeClient, type StorageAdapter } from "@collabos/core";
+import { ApiClient, applyEnvelope, attachSnapshotCache, idbStore, createAppStore, CoreProvider, initI18n, RealtimeClient, type StorageAdapter } from "@collabos/core";
 import { AppShell, LoginView, NavigationProvider, resources, type NavigationAdapter } from "@collabos/views";
 import "./app.css";
 
@@ -28,6 +28,25 @@ const api = new ApiClient({
   },
 });
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } });
+
+const snapshots = idbStore();
+
+/** Hydrates the last-known workspace snapshot from IndexedDB (FR-CLI-401). */
+function OfflineCache() {
+  const ws = store((s) => s.session?.workspaceId ?? "");
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!ws || !snapshots) return;
+    let stop: (() => void) | undefined;
+    let dead = false;
+    void attachSnapshotCache(qc, snapshots, ws).then((f) => (dead ? f() : (stop = f)));
+    return () => {
+      dead = true;
+      stop?.();
+    };
+  }, [ws, qc]);
+  return null;
+}
 
 const Config = z.object({ password_required: z.boolean().catch(false) });
 
@@ -82,6 +101,7 @@ function Gate({ roomId }: { roomId: string | null }) {
       {session ? (
         <>
           <Realtime />
+          <OfflineCache />
           <AppShell key={session.workspaceId + session.userId} />
         </>
       ) : (

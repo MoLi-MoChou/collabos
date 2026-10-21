@@ -46,7 +46,8 @@
     "sending": "Sending…",
     "placeholder": "Message #{{room}}, type @ to mention people or bots",
     "hint": "Enter to send · Shift+Enter for newline",
-    "send": "Send"
+    "send": "Send",
+    "earlier": "Show {{n}} earlier messages"
   },
   "card": {
     "details": "Details",
