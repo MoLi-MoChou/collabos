@@ -253,6 +253,7 @@ type MergeExecute struct {
 	BaseBranch     string `json:"base_branch"`
 	ApprovedCommit string `json:"approved_commit"`
 	PRNumber       int32  `json:"pr_number"`
+	PRURL          string `json:"pr_url,omitempty"`
 	Message        string `json:"message"`
 }
 

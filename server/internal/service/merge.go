@@ -118,7 +118,7 @@ func (s *Service) DecideMerge(ctx context.Context, wsID, userID, approvalID stri
 	s.Audit(ctx, t.WorkspaceID, "user", userID, "merge.approve", "pull_request", util.UUIDString(pr.ID), map[string]any{"approved_commit": ap.ApprovedCommit, "executor": util.UUIDString(executor.ID)})
 	s.Daemons.Send(util.UUIDString(executor.ID), protocol.Msg(protocol.TypeMergeExecute, protocol.MergeExecute{
 		ApprovalID: approvalID, TaskID: util.UUIDString(t.ID), RemoteURL: p.RemoteUrl, Provider: p.Provider,
-		Branch: pr.Branch, BaseBranch: pr.BaseBranch, ApprovedCommit: ap.ApprovedCommit, PRNumber: pr.Number,
+		Branch: pr.Branch, BaseBranch: pr.BaseBranch, ApprovedCommit: ap.ApprovedCommit, PRNumber: pr.Number, PRURL: prURLFor(pr),
 		Message: fmt.Sprintf("Merge PR #%d: %s (CollabOS task %s)", pr.Number, t.Title, util.UUIDString(t.ID)),
 	}))
 	if hasCard {
@@ -209,4 +209,11 @@ func (s *Service) ListPullRequests(ctx context.Context, wsID string) ([]PullRequ
 		out = append(out, prDTO(p))
 	}
 	return out, nil
+}
+
+func prURLFor(pr db.PullRequest) string {
+	if pr.Provider == "github" {
+		return pr.Url
+	}
+	return ""
 }
