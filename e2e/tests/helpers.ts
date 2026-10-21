@@ -116,3 +116,19 @@ export async function rejectWith(scope: Locator, testId: string, reason: string)
   await scope.getByTestId("reason-input").fill(reason);
   await scope.getByTestId("reason-confirm").click();
 }
+
+/**
+ * Waits for the merge card of a task. Models sometimes touch files outside the
+ * grant (e.g. README); any such permission request is allowed by an eligible approver.
+ */
+export async function untilMergePending(page: Page, taskId: string, timeout = 8 * 60_000): Promise<Locator> {
+  const merge = card(page, "merge", taskId);
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    if ((await merge.count()) && (await merge.getAttribute("data-state")) === "pending") return merge;
+    const perm = page.locator(`[data-testid="permission-card"][data-task-id="${taskId}"][data-state="pending"] [data-testid="permission-allow"]`);
+    if (await perm.count()) await perm.first().click().catch(() => undefined);
+    await page.waitForTimeout(2000);
+  }
+  throw new Error(`merge card for ${taskId} never became pending`);
+}

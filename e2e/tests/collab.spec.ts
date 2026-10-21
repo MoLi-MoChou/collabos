@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { apiAs, card, rejectWith, delegate, login, newPerson, notice, openTask, pair, send, shot, waitStatus, type Person } from "./helpers";
+import { apiAs, card, rejectWith, untilMergePending, delegate, login, newPerson, notice, openTask, pair, send, shot, waitStatus, type Person } from "./helpers";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { kill, remoteFile, REMOTE, restartDaemon, RUN, startDaemon, startServer } from "./env";
@@ -184,7 +184,7 @@ test("服务器宕机：守护进程离线记账，重连后回放", async () =>
   await expect(zs.page.getByTestId("reconnecting")).toHaveCount(0, { timeout: 60_000 });
   // The daemon journaled the frames it could not deliver and replayed them.
   await expect.poll(() => readFileSync(join(RUN, "daemon-ls.log"), "utf8"), { timeout: 60_000 }).toMatch(/replayed journal .*frames=[1-9]/);
-  await expect(card(zs.page, "merge", id)).toHaveAttribute("data-state", "pending", { timeout: 8 * 60_000 });
+  await untilMergePending(zs.page, id);
   const term = await openTask(zs.page, id);
   await expect(term.getByTestId("terminal")).toContainText(/PR/);
   await shot(zs.page, "14-replayed");
