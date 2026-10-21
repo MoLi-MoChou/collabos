@@ -62,7 +62,9 @@ type Options struct {
 	Root     string
 	OnUpdate func(sessionID string, update json.RawMessage)
 	Decide   Decider
-	Trace    func(dir string, raw []byte)
+	// CheckWrite may veto an fs/write_text_file after confinement (grant check).
+	CheckWrite func(path string) error
+	Trace      func(dir string, raw []byte)
 }
 
 // InitializeResult is the subset of the agent's initialize answer we keep.
@@ -210,6 +212,11 @@ func (c *Client) handleRequest(ctx context.Context, method string, params json.R
 		path, err := c.confine(p.Path)
 		if err != nil {
 			return nil, &RPCError{Code: CodeInvalidParams, Message: err.Error()}
+		}
+		if c.opts.CheckWrite != nil {
+			if err := c.opts.CheckWrite(path); err != nil {
+				return nil, &RPCError{Code: CodeInvalidParams, Message: err.Error()}
+			}
 		}
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			return nil, &RPCError{Code: CodeInternal, Message: err.Error()}
