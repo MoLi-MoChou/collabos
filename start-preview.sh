@@ -43,11 +43,30 @@ done
 if [ "${1:-}" = "--reset" ] || ! kill -0 "$(cat "$DIR/tunnel.pid" 2>/dev/null)" 2>/dev/null; then
   stop tunnel
   : >"$DIR/tunnel.log"
-  nohup "$CLOUDFLARED" tunnel --no-autoupdate --url "http://localhost:$PORT" >"$DIR/tunnel.log" 2>&1 &
+  nohup "$CLOUDFLARED" tunnel --no-autoupdate --protocol http2 --url "http://localhost:$PORT" >"$DIR/tunnel.log" 2>&1 &
   echo $! >"$DIR/tunnel.pid"
   for _ in $(seq 1 60); do grep -qo 'https://[a-z0-9-]*\.trycloudflare\.com' "$DIR/tunnel.log" && break; sleep 1; done
 fi
 URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' "$DIR/tunnel.log" | head -1)
+for _ in $(seq 1 30); do grep -q 'Registered tunnel connection' "$DIR/tunnel.log" && break; sleep 1; done
+if ! grep -q 'Registered tunnel connection' "$DIR/tunnel.log"; then
+  echo "WARNING: cloudflared could not reach the Cloudflare edge (outbound TCP/UDP 7844 needed); see $DIR/tunnel.log" >&2
+  URL=""
+fi
+cat >"$ROOT/PREVIEW.md" <<MD
+# CollabOS 预览（本机生成，勿提交）
+
+- 公网地址：${URL:-（隧道未建立，见 $DIR/tunnel.log）}
+- 本机地址：http://localhost:$PORT
+- 访问口令（登录页「预览访问口令」）：\`$(cat "$DIR/access-code")\`
+- 演示账号（只允许这三个邮箱登录，不能注册新账号）：
+  - 张三 \`zhangsan@demo.local\`（工作区所有者、项目负责人；设备 zhangsan-laptop：@zs-chief、@zs-coder）
+  - 李四 \`lisi@demo.local\`（设备 lisi-laptop：@ls-coder）
+  - 王五 \`wangwu@demo.local\`（无设备）
+- 示例项目：calc（远端 $DIR/remote.git）
+- 重启：\`./start-preview.sh\`；清空重建（会换口令）：\`./start-preview.sh --reset\`
+- 日志：$DIR/{server,daemon-zs,daemon-ls,tunnel}.log
+MD
 echo "preview:     $URL"
 echo "local:       http://localhost:$PORT"
 echo "access code: $(cat "$DIR/access-code")"

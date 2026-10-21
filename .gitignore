@@ -10,3 +10,4 @@ test-results/
 playwright-report/
 .collabos/
 /e2e/.run/
+PREVIEW.md
