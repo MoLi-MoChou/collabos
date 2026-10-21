@@ -228,7 +228,7 @@ func (s *Service) CreateProject(ctx context.Context, wsID, actorID string, in Pr
 		in.DefaultBranch = "main"
 	}
 	if in.Provider == "" {
-		in.Provider = "local"
+		in.Provider = DetectProvider(in.RemoteURL)
 	}
 	if in.Provider != "local" && in.Provider != "github" {
 		return ProjectDTO{}, apperr.BadRequest("provider must be local or github")
@@ -478,4 +478,13 @@ func daemonCaps(d db.Daemon) protocol.Capabilities {
 	var c protocol.Capabilities
 	_ = util.Unmarshal(d.Capabilities, &c)
 	return c
+}
+
+// DetectProvider infers the code-hosting provider from a remote URL.
+func DetectProvider(remote string) string {
+	r := strings.ToLower(strings.TrimSpace(remote))
+	if strings.HasPrefix(r, "https://github.com/") || strings.HasPrefix(r, "git@github.com:") || strings.HasPrefix(r, "ssh://git@github.com/") {
+		return "github"
+	}
+	return "local"
 }

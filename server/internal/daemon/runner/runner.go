@@ -426,7 +426,7 @@ func (r *run) finishCode(ctx context.Context, res *protocol.DaemonTaskCompleted)
 }
 
 // githubCreatePR opens a PR with the executing user's own gh credentials.
-// Not runtime-verified in this repository's CI (no GitHub test repo).
+// Verified by e2e/tests/github.spec.ts (E2E_GITHUB_REPO).
 func githubCreatePR(ctx context.Context, dir, head, base, title, body string) (string, error) {
 	cmd := exec.CommandContext(ctx, "gh", "pr", "create", "--head", head, "--base", base, "--title", title, "--body", body+"\n\n_Opened by CollabOS_")
 	cmd.Dir = dir

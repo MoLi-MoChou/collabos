@@ -23,6 +23,8 @@
 8. Chief Bot：在群聊里 @自己的 Chief，Chief 回复并起草对他人专家 Bot 的委托草稿卡。
 9. 审计日志（接单、拒绝、授权、合并、记忆确认等）与深色主题。
 
+10. GitHub 提供方（`E2E_GITHUB_REPO=MoLi-MoChou/collabos-sandbox-test pnpm e2e`）：项目远端为 GitHub 时自动识别 provider；执行方守护进程推分支并用本人 gh 凭据 `gh pr create`；具名审批人的守护进程执行 `gh pr merge --match-head-commit <已批准提交>`；GitHub 上 PR 状态为 MERGED，main 含改动。实测 PR：https://github.com/MoLi-MoChou/collabos-sandbox-test/pull/1
+
 截图：`docs/screens/`。
 
 ## E2E 中发现并修复的问题
@@ -35,6 +37,5 @@
 ## 未在运行时验证的部分
 
 - **macOS Seatbelt 沙箱**：SBPL 配置文件已实现并有单元测试（生成内容），但未在 macOS 上实际运行。
-- **GitHub 提供方**：`gh pr create` / `gh pr merge --match-head-commit` 路径已实现，未用真实 GitHub 仓库验证（E2E 使用本地裸仓库，走 git 提供方）。
 - **Windows**：守护进程可编译（进程组处理有 Windows 实现），但没有 OS 沙箱，未在 Windows 上运行；无沙箱设备只能接自己的任务。
 - 沙箱**不隔离网络**（模型 API 需要），这是已知限制。

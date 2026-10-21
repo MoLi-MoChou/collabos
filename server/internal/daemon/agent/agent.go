@@ -442,7 +442,7 @@ func (d *Daemon) merge(ctx context.Context, m protocol.MergeExecute) {
 }
 
 // githubMerge merges with the approver's own gh login, pinned to the approved
-// head commit. Not runtime-verified here (no GitHub test repository in CI).
+// head commit. Verified by e2e/tests/github.spec.ts (E2E_GITHUB_REPO).
 func githubMerge(ctx context.Context, repo string, m protocol.MergeExecute) protocol.MergeResult {
 	res := protocol.MergeResult{ApprovalID: m.ApprovalID, TaskID: m.TaskID}
 	head, err := worktree.Git(ctx, repo, "ls-remote", "origin", "refs/heads/"+m.Branch)

@@ -81,7 +81,7 @@ export async function waitStatus(page: Page, taskId: string, status: RegExp, tim
 }
 
 /** Calls the API with the page's own session, to probe server-side authorization. */
-export async function apiAs(page: Page, method: string, path: string, body?: unknown): Promise<{ status: number; code: string }> {
+export async function apiAs(page: Page, method: string, path: string, body?: unknown): Promise<{ status: number; code: string; json: Record<string, unknown> }> {
   return page.evaluate(
     async ({ method, path, body }) => {
       const s = JSON.parse(localStorage.getItem("collabos.session") ?? "{}");
@@ -91,7 +91,7 @@ export async function apiAs(page: Page, method: string, path: string, body?: unk
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}));
-      return { status: r.status, code: String(j.code ?? "") };
+      return { status: r.status, code: String(j.code ?? ""), json: j };
     },
     { method, path, body },
   );
