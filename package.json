@@ -1,0 +1,19 @@
+{
+  "name": "collabos",
+  "private": true,
+  "packageManager": "pnpm@10.34.6",
+  "engines": { "node": ">=20.19" },
+  "scripts": {
+    "dev": "turbo run dev --filter=@collabos/web",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "e2e": "pnpm --filter @collabos/e2e test",
+    "gen:protocol": "cd server && ~/go/bin/tygo generate || tygo generate"
+  },
+  "devDependencies": {
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}
