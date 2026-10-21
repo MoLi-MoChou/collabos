@@ -26,6 +26,8 @@ const (
 	ReasonIntakeTimeout  = "intake_timeout"
 	ReasonGrantExpired   = "grant_expired"
 	ReasonHostOffline    = "host_offline"
+	// ReasonDelegationInvalid: a chief emitted a malformed delegation block.
+	ReasonDelegationInvalid = "delegation_invalid"
 )
 
 // NewTraceID returns a fresh trace id (FR-SRV-602).

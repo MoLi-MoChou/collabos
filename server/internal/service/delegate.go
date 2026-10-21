@@ -579,26 +579,34 @@ type DelegationBlock struct {
 	Resources []string `json:"resources"`
 }
 
-// ParseDelegationBlock extracts the first ```delegation fenced JSON block.
-func ParseDelegationBlock(text string) (DelegationBlock, string, bool) {
+// ParseDelegationBlock extracts the first ```delegation fenced JSON block
+// (fence tag matched case-insensitively). found reports whether a delegation
+// fence was present at all, so a malformed block can be surfaced instead of
+// silently dropped.
+func ParseDelegationBlock(text string) (b DelegationBlock, cleaned string, ok bool) {
+	b, cleaned, ok, _ = parseDelegationBlock(text)
+	return b, cleaned, ok
+}
+
+func parseDelegationBlock(text string) (DelegationBlock, string, bool, bool) {
 	const open = "```delegation"
-	i := strings.Index(text, open)
+	i := strings.Index(strings.ToLower(text), open)
 	if i < 0 {
-		return DelegationBlock{}, text, false
+		return DelegationBlock{}, text, false, false
 	}
 	rest := text[i+len(open):]
 	j := strings.Index(rest, "```")
 	if j < 0 {
-		return DelegationBlock{}, text, false
+		return DelegationBlock{}, text, false, true
 	}
 	var b DelegationBlock
 	body := strings.TrimSpace(rest[:j])
 	if err := json.Unmarshal([]byte(body), &b); err != nil {
-		return DelegationBlock{}, text, false
+		return DelegationBlock{}, text, false, true
 	}
 	b.Target = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(b.Target)), "@")
 	cleaned := strings.TrimSpace(text[:i] + rest[j+3:])
-	return b, cleaned, b.Target != "" && b.Title != ""
+	return b, cleaned, b.Target != "" && b.Title != "", true
 }
 
 func (s *Service) finishChiefRun(ctx context.Context, t db.Task, c protocol.DaemonTaskCompleted) {
@@ -611,9 +619,13 @@ func (s *Service) finishChiefRun(ctx context.Context, t db.Task, c protocol.Daem
 		text = "（运行失败：" + c.Error + "）"
 	}
 	ui, text := ExtractRich(c.UI, text)
-	block, cleaned, ok := ParseDelegationBlock(text)
-	if cleaned == "" {
+	block, cleaned, ok, found := parseDelegationBlock(text)
+	switch {
+	case cleaned == "" && ok:
 		cleaned = "好的，已起草委托。"
+	case cleaned == "":
+		// Never claim a draft that was not produced.
+		cleaned = "（Chief 没有返回任何内容）"
 	}
 	agentMsg, err := s.postMessage(ctx, post{room: r, senderType: "agent", senderID: t.TargetAgentID, body: cleaned, trust: "untrusted"})
 	if err == nil && ui != nil {
@@ -621,7 +633,13 @@ func (s *Service) finishChiefRun(ctx context.Context, t db.Task, c protocol.Daem
 			agentMsg = s.attachRich(ctx, agentMsg, chief, ui)
 		}
 	}
-	if err != nil || !ok {
+	if err != nil {
+		return
+	}
+	if !ok {
+		if found {
+			_, _ = s.systemCard(ctx, r.ID, "Chief 输出的委托块格式无效，未生成草稿", Card{"type": "notice", "code": ReasonDelegationInvalid, "task_id": util.UUIDString(t.ID)})
+		}
 		return
 	}
 	target, err := s.Q.GetAgentByHandle(ctx, db.GetAgentByHandleParams{WorkspaceID: t.WorkspaceID, Handle: block.Target})

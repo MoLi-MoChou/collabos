@@ -277,7 +277,8 @@
     "merged_on_platform": "已在平台合并",
     "pr_closed_on_platform": "PR 已在平台关闭",
     "autonomy_supervised": "监督模式需要审批",
-    "agent_inactive": "模型无响应（可能限流或出错），任务已超时失败"
+    "agent_inactive": "模型无响应（可能限流或出错），任务已超时失败",
+    "delegation_invalid": "Chief 输出的委托块格式无效"
   },
   "pr": {
     "open": "待合并",

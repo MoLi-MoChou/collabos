@@ -646,3 +646,50 @@ func TestAgentInactiveFailsTaskWithReason(t *testing.T) {
 		t.Fatal("no agent_inactive notice card")
 	}
 }
+
+// A chief run that returns nothing must not claim a draft; a malformed
+// delegation block is surfaced as a notice instead of silently dropped.
+func TestChiefRunNeverClaimsMissingDraft(t *testing.T) {
+	w := setup(t, nil)
+	ctx := context.Background()
+	src, err := w.s.SendMessage(ctx, w.ws, w.alice, w.room, SendInput{ClientMsgID: "c1", Body: "请规划一下"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := w.delegate(t, "chief-base", nil)
+	tk, err := w.s.Q.GetTask(ctx, util.MustUUID(base.ID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tk.SourceMessageID = util.MustUUID(src.ID)
+	lastAgentBody := func() string {
+		msgs, _ := w.s.ListMessages(ctx, w.ws, w.room, 0)
+		body := ""
+		for _, m := range msgs {
+			if m.SenderType == "agent" {
+				body = m.Body
+			}
+		}
+		return body
+	}
+	drafts := len(w.cards(t, "draft"))
+
+	w.s.finishChiefRun(ctx, tk, protocol.DaemonTaskCompleted{TaskID: base.ID, Outcome: protocol.OutcomeCompleted, Summary: ""})
+	if got := lastAgentBody(); got != "（Chief 没有返回任何内容）" {
+		t.Fatalf("empty reply rendered as %q", got)
+	}
+
+	w.s.finishChiefRun(ctx, tk, protocol.DaemonTaskCompleted{TaskID: base.ID, Outcome: protocol.OutcomeCompleted, Summary: "交给 ls\n```delegation\n{target: ls}\n```"})
+	invalid := false
+	for _, c := range w.cards(t, "notice") {
+		if c["code"] == ReasonDelegationInvalid {
+			invalid = true
+		}
+	}
+	if !invalid {
+		t.Fatal("malformed block not surfaced")
+	}
+	if n := len(w.cards(t, "draft")); n != drafts {
+		t.Fatalf("drafts changed: %d -> %d", drafts, n)
+	}
+}
