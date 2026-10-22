@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "No IPC is exposed to the remote web client.",
+  "windows": ["main"],
+  "permissions": []
+}

@@ -1,8 +1,7 @@
-//go:build !windows
-
 package agent
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -23,4 +22,17 @@ func TestSingleInstanceLock(t *testing.T) {
 		t.Fatalf("lock not released: %v", err)
 	}
 	releaseLock(b)
+}
+
+// A lock file left behind by a killed daemon must not block the next start.
+func TestStaleLockFileIsReclaimed(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "daemon.lock")
+	if err := os.WriteFile(p, []byte("stale"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := acquireLock(p)
+	if err != nil {
+		t.Fatalf("stale lock file blocked startup: %v", err)
+	}
+	releaseLock(f)
 }
