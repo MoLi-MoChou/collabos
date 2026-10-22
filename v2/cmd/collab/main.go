@@ -309,7 +309,7 @@ func call(ctx context.Context, args []string) error {
 	}
 	s := &mcp.Server{API: a, MaxWait: *timeout + time.Minute, Cwd: mcp.Cwd()}
 	inc := !*noCode
-	out, err := s.CallAgent(ctx, args[0], args[1], *cwd, inc, timeout.Minutes(), func(m string) { fmt.Fprintln(os.Stderr, "…", m) })
+	out, err := s.CallAgent(ctx, args[0], args[1], *cwd, inc, timeout.Minutes(), printChanged())
 	if err != nil {
 		return err
 	}
@@ -344,3 +344,13 @@ func oneLine(s string, n int) string {
 	return s
 }
 
+
+func printChanged() func(string) {
+	last := ""
+	return func(m string) {
+		if m != last {
+			fmt.Fprintln(os.Stderr, "…", m)
+			last = m
+		}
+	}
+}
