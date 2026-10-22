@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // Job is one run.
@@ -27,7 +28,13 @@ type Job struct {
 	Progress func(string)
 	// Stderr, when set, receives the agent's stderr.
 	Stderr io.Writer
+	// Inactivity fails the run when the agent sends nothing for this long
+	// (0 disables).
+	Inactivity time.Duration
 }
+
+// ErrInactive is returned when the agent went silent for Job.Inactivity.
+var ErrInactive = errors.New("agent inactive")
 
 // Result is the agent's final answer.
 type Result struct {
@@ -150,11 +157,14 @@ func Run(ctx context.Context, j Job) (Result, error) {
 		lastKind string
 	)
 	dead := make(chan struct{})
+	var lastActive atomic.Int64
+	lastActive.Store(time.Now().UnixNano())
 	go func() {
 		defer close(dead)
 		sc := bufio.NewScanner(stdout)
 		sc.Buffer(make([]byte, 1<<20), 64<<20)
 		for sc.Scan() {
+			lastActive.Store(time.Now().UnixNano())
 			var m rpcMsg
 			if json.Unmarshal(sc.Bytes(), &m) != nil {
 				continue
@@ -210,15 +220,32 @@ func Run(ctx context.Context, j Job) (Result, error) {
 			}
 		}
 	}()
-	rctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	rctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
 	go func() {
 		select {
 		case <-dead:
-			cancel()
+			cancel(nil)
 		case <-rctx.Done():
 		}
 	}()
+	if j.Inactivity > 0 {
+		go func() {
+			t := time.NewTicker(min(j.Inactivity/4, 5*time.Second))
+			defer t.Stop()
+			for {
+				select {
+				case <-rctx.Done():
+					return
+				case <-t.C:
+					if idle := time.Since(time.Unix(0, lastActive.Load())); idle >= j.Inactivity {
+						cancel(fmt.Errorf("%w: no ACP activity for %s (model stuck or rate-limited?)", ErrInactive, idle.Round(time.Second)))
+						return
+					}
+				}
+			}
+		}()
+	}
 	var init struct {
 		ProtocolVersion int `json:"protocolVersion"`
 		AgentInfo       struct {
@@ -231,14 +258,14 @@ func Run(ctx context.Context, j Job) (Result, error) {
 		"clientCapabilities": map[string]any{"fs": map[string]bool{"readTextFile": false, "writeTextFile": false}, "terminal": false},
 		"clientInfo":         map[string]string{"name": "collab", "version": "2"},
 	}, &init); err != nil {
-		return Result{}, wrapDead(ctx, dead, err)
+		return Result{}, wrapDead(ctx, rctx, dead, err)
 	}
 	res := Result{Agent: strings.TrimSpace(init.AgentInfo.Name + " " + init.AgentInfo.Version)}
 	var sess struct {
 		SessionID string `json:"sessionId"`
 	}
 	if err := c.call(rctx, "session/new", map[string]any{"cwd": j.Dir, "mcpServers": []any{}}, &sess); err != nil {
-		return res, wrapDead(ctx, dead, err)
+		return res, wrapDead(ctx, rctx, dead, err)
 	}
 	progress("agent started (" + res.Agent + ")")
 	var pr struct {
@@ -249,10 +276,10 @@ func Run(ctx context.Context, j Job) (Result, error) {
 		"prompt":    []map[string]string{{"type": "text", "text": j.Prompt}},
 	}, &pr)
 	if err != nil {
-		if ctx.Err() != nil {
+		if rctx.Err() != nil {
 			_ = c.write(map[string]any{"jsonrpc": "2.0", "method": "session/cancel", "params": map[string]string{"sessionId": sess.SessionID}})
 		}
-		return res, wrapDead(ctx, dead, err)
+		return res, wrapDead(ctx, rctx, dead, err)
 	}
 	tmu.Lock()
 	res.Text = strings.TrimSpace(text.String())
@@ -264,7 +291,10 @@ func Run(ctx context.Context, j Job) (Result, error) {
 	return res, nil
 }
 
-func wrapDead(ctx context.Context, dead chan struct{}, err error) error {
+func wrapDead(ctx, rctx context.Context, dead chan struct{}, err error) error {
+	if c := context.Cause(rctx); c != nil && errors.Is(c, ErrInactive) {
+		return c
+	}
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}

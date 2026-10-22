@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,6 +14,10 @@ import (
 
 // TestMain doubles as a fake ACP agent when FAKE_ACP=1.
 func TestMain(m *testing.M) {
+	if os.Getenv("FAKE_ACP") == "silent" {
+		silentAgent()
+		return
+	}
 	if os.Getenv("FAKE_ACP") == "1" {
 		fakeAgent()
 		return
@@ -86,5 +91,36 @@ func TestRunMissingAgent(t *testing.T) {
 	_, err := Run(context.Background(), Job{Argv: []string{"definitely-not-an-agent-xyz"}, Dir: t.TempDir()})
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+// silentAgent starts a session, then never answers the prompt.
+func silentAgent() {
+	sc := bufio.NewScanner(os.Stdin)
+	out := json.NewEncoder(os.Stdout)
+	for sc.Scan() {
+		var m struct {
+			ID     json.RawMessage `json:"id"`
+			Method string          `json:"method"`
+		}
+		_ = json.Unmarshal(sc.Bytes(), &m)
+		switch m.Method {
+		case "initialize":
+			out.Encode(map[string]any{"jsonrpc": "2.0", "id": m.ID, "result": map[string]any{"protocolVersion": 1}})
+		case "session/new":
+			out.Encode(map[string]any{"jsonrpc": "2.0", "id": m.ID, "result": map[string]any{"sessionId": "s1"}})
+		}
+	}
+}
+
+func TestInactivityFailsFast(t *testing.T) {
+	exe, _ := os.Executable()
+	t0 := time.Now()
+	_, err := Run(context.Background(), Job{Argv: []string{exe}, Dir: t.TempDir(), Env: []string{"FAKE_ACP=silent"}, Prompt: "x", Inactivity: 500 * time.Millisecond})
+	if !errors.Is(err, ErrInactive) || !strings.Contains(err.Error(), "no ACP activity") {
+		t.Fatalf("want inactivity error, got %v", err)
+	}
+	if time.Since(t0) > 5*time.Second {
+		t.Fatal("took too long")
 	}
 }

@@ -318,7 +318,7 @@ func (d *Daemon) runACP(ctx context.Context, c wire.Call, progress func(string))
 	if logf != nil {
 		defer logf.Close()
 	}
-	job := acp.Job{Argv: argv, Dir: dir, Env: env, Prompt: BuildPrompt(c, note), Progress: progress}
+	job := acp.Job{Argv: argv, Dir: dir, Env: env, Prompt: BuildPrompt(c, note), Progress: progress, Inactivity: d.Cfg.InactivityTimeout()}
 	if logf != nil {
 		job.Stderr = logf
 	}

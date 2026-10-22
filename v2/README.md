@@ -75,4 +75,4 @@ bypass 模式：被调用的智能体在对方电脑上不经确认执行命令�
 服务器目前是 HTTP，令牌明文传输，正式使用请加 HTTPS 反代。
 
 ## 环境变量
-`COLLAB_HOME`（默认 `~/.collab`）、`COLLAB_SERVER`/`COLLAB_TOKEN`（覆盖配置）、`COLLAB_MCP_MAX_WAIT`（call_agent 最长阻塞，默认 30m；客户端工具超时更短时调小，超时后用 get_call_result）。
+`COLLAB_AGENT_INACTIVITY`（被调用方智能体多久没有任何 ACP 消息就判失败，默认 5m，0 关闭；也可在 config.json 写 "inactivity"）、`COLLAB_HOME`（默认 `~/.collab`）、`COLLAB_SERVER`/`COLLAB_TOKEN`（覆盖配置）、`COLLAB_MCP_MAX_WAIT`（call_agent 最长阻塞，默认 30m；客户端工具超时更短时调小，超时后用 get_call_result）。

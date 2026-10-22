@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Config is the device configuration.
@@ -25,6 +26,9 @@ type Config struct {
 	// Repos maps a git remote URL to a local clone, so callees can check out
 	// the caller's code.
 	Repos map[string]string `json:"repos,omitempty"`
+	// Inactivity fails a call when the agent sends nothing for this long
+	// (Go duration, default "5m", "0" disables). COLLAB_AGENT_INACTIVITY overrides.
+	Inactivity string `json:"inactivity,omitempty"`
 	// MaxConcurrent caps simultaneous incoming calls (default 2).
 	MaxConcurrent int `json:"max_concurrent,omitempty"`
 }
@@ -79,6 +83,25 @@ func Save(c Config) error {
 	}
 	b, _ := json.MarshalIndent(c, "", "  ")
 	return os.WriteFile(Path(), b, 0o600)
+}
+
+// InactivityTimeout is the parsed inactivity limit.
+func (c Config) InactivityTimeout() time.Duration {
+	v := c.Inactivity
+	if e := os.Getenv("COLLAB_AGENT_INACTIVITY"); e != "" {
+		v = e
+	}
+	if v == "" {
+		return 5 * time.Minute
+	}
+	if v == "0" {
+		return 0
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d < 0 {
+		return 5 * time.Minute
+	}
+	return d
 }
 
 // AgentArgv resolves the agent command.

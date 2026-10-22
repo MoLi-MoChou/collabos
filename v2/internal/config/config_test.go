@@ -26,3 +26,9 @@ func TestAgentPresets(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+func TestInactivity(t *testing.T) {
+	if (Config{}).InactivityTimeout().Minutes() != 5 || (Config{Inactivity: "0"}).InactivityTimeout() != 0 || (Config{Inactivity: "90s"}).InactivityTimeout().Seconds() != 90 {
+		t.Fatal("inactivity parse")
+	}
+}
