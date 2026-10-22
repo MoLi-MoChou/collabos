@@ -46,7 +46,7 @@ func TestCaptureAndWorkspace(t *testing.T) {
 	dir, note, cleanup := Workspace(ctx, t.TempDir(), "c1", callee, cc)
 	defer cleanup()
 	b, err := os.ReadFile(filepath.Join(dir, "code", "a.txt"))
-	if err != nil || string(b) != "two\n" {
+	if err != nil || strings.ReplaceAll(string(b), "\r", "") != "two\n" {
 		t.Fatalf("checkout: %q %v (%s)", b, err, note)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "code", "b.txt")); err != nil {
