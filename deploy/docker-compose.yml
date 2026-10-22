@@ -1,0 +1,13 @@
+name: collabos
+services:
+  server:
+    build: .
+    image: collabos-server:latest
+    restart: unless-stopped
+    env_file: .env
+    ports: ["8190:8080"]
+    networks: [pg]
+networks:
+  pg:
+    name: 1panel-network
+    external: true
