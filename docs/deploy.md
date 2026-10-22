@@ -55,3 +55,19 @@ collab run            # COLLAB_HOME defaults to ~/.collabos
 ```
 
 The daemon connects outbound to `ws://HOST:8190/daemon/ws`; no inbound port is needed.
+
+## Windows (desktop app + daemon)
+
+The `desktop` workflow (windows-latest) runs the daemon tests on Windows, builds
+`collab.exe`, and produces per-user installers (`CollabOS_*_x64-setup.exe`, NSIS
+`currentUser`, plus an `.msi`) as the `collabos-windows` artifact. Run it manually with
+a different `server_url` to bake another default server.
+
+- App: installs to `%LOCALAPPDATA%\CollabOS` (no admin). It opens `server_url` from
+  `%APPDATA%\com.collabos.desktop\config.json` (written on first run; env
+  `COLLABOS_SERVER_URL` overrides). Set `"start_daemon": true` to have the app start the
+  bundled `collab.exe run` and stop it on exit.
+- Daemon: `collab login --server URL --token NODE_TOKEN`, `collab repo add PATH --remote URL`,
+  `collab run`. Config lives in `%USERPROFILE%\.collabos`. Phase 1: sandbox `none`, so the
+  daemon only accepts its owner's own (self-delegated) tasks. Project test commands run via
+  `cmd.exe /c`. Pause/resume suspends the agent process tree (NtSuspendProcess).
