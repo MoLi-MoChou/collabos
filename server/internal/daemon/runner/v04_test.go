@@ -2,6 +2,7 @@ package runner
 
 import (
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -42,6 +43,9 @@ func TestLimitArgv(t *testing.T) {
 
 // Pause/Resume stop and continue the real process group (FR-CLI-402 / budget pause).
 func TestControlPausesProcessGroup(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("covered by TestControlSuspendsProcessTreeWindows")
+	}
 	cmd := exec.Command("sh", "-c", "sleep 30")
 	setProcessGroup(cmd)
 	if err := cmd.Start(); err != nil {
