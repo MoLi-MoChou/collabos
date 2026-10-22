@@ -266,6 +266,11 @@ func ConfinePath(root, p string) (string, error) {
 		return "", err
 	}
 	if !filepath.IsAbs(p) {
+		// On Windows "/etc/x", "\\x" and "C:x" are not absolute but still name
+		// a location outside root (current drive or drive-relative): refuse.
+		if filepath.VolumeName(p) != "" || strings.HasPrefix(p, "/") || strings.HasPrefix(p, `\`) {
+			return "", ErrPathOutsideRoot
+		}
 		p = filepath.Join(rootReal, p)
 	}
 	clean := filepath.Clean(p)

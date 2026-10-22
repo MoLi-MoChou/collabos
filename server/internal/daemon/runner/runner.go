@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -688,7 +689,7 @@ func (r *run) runTests(ctx context.Context) *protocol.TestResult {
 	cmdline := r.job.Task.TestCommand
 	r.phase("tests", "running "+cmdline)
 	spec := r.spec()
-	spec.Argv = limitArgv(r.job.Limits, []string{"sh", "-c", cmdline})
+	spec.Argv = limitArgv(r.job.Limits, shellArgv(runtime.GOOS, cmdline))
 	spec.Network = false
 	tctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
@@ -713,6 +714,15 @@ func (r *run) runTests(ctx context.Context) *protocol.TestResult {
 	}
 	r.phase("tests", "tests "+state)
 	return res
+}
+
+// shellArgv runs a project test command through the platform shell:
+// cmd.exe on Windows (no sh there by default), sh elsewhere.
+func shellArgv(goos, cmdline string) []string {
+	if goos == "windows" {
+		return []string{"cmd.exe", "/d", "/s", "/c", cmdline}
+	}
+	return []string{"sh", "-c", cmdline}
 }
 
 // limitArgv wraps argv with prlimit when limits are set and prlimit exists.

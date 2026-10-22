@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -130,6 +131,13 @@ func TestConfinePath(t *testing.T) {
 	for _, p := range []string{"/etc/passwd", filepath.Join(root, "../x"), "../../x"} {
 		if _, err := ConfinePath(root, p); err == nil {
 			t.Errorf("%s should be outside", p)
+		}
+	}
+	if runtime.GOOS == "windows" {
+		for _, p := range []string{`\Windows\win.ini`, `C:x.txt`, `\\srv\share\f`} {
+			if _, err := ConfinePath(root, p); err == nil {
+				t.Errorf("%s should be outside", p)
+			}
 		}
 	}
 	outside := t.TempDir()
