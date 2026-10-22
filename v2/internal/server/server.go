@@ -184,7 +184,9 @@ func (s *Server) reconcile(device string, active []string) {
 	}
 	for _, c := range open {
 		if c.Status == wire.StatusRunning && !run[c.ID] {
-			s.update(c.ID, func(c *wire.Call) { finish(c, wire.StatusFailed, "", "callee daemon restarted while the call was running") })
+			s.update(c.ID, func(c *wire.Call) {
+				finish(c, wire.StatusFailed, "", "callee daemon restarted while the call was running")
+			})
 		}
 		if c.Status == wire.StatusQueued {
 			s.deliver(c)

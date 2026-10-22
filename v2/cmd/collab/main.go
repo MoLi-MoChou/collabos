@@ -344,7 +344,6 @@ func oneLine(s string, n int) string {
 	return s
 }
 
-
 func printChanged() func(string) {
 	last := ""
 	return func(m string) {

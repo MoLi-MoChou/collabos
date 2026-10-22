@@ -7,9 +7,9 @@ import "time"
 type Frame struct {
 	Type string `json:"type"` // hello | call | progress | result | cancel
 	// hello (daemon -> server)
-	Agent    string `json:"agent,omitempty"`
-	Hostname string `json:"hostname,omitempty"`
-	OS       string `json:"os,omitempty"`
+	Agent    string   `json:"agent,omitempty"`
+	Hostname string   `json:"hostname,omitempty"`
+	OS       string   `json:"os,omitempty"`
 	Active   []string `json:"active,omitempty"`
 	// call (server -> daemon)
 	Call *Call `json:"call,omitempty"`

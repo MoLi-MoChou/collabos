@@ -31,9 +31,9 @@ type Runner func(ctx context.Context, c wire.Call, progress func(string)) (strin
 
 // Daemon is the device agent host.
 type Daemon struct {
-	Cfg    config.Config
-	Log    *slog.Logger
-	Run    Runner
+	Cfg     config.Config
+	Log     *slog.Logger
+	Run     Runner
 	Scratch string
 
 	wmu    sync.Mutex
